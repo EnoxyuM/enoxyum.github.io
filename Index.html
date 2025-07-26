@@ -3,7 +3,7 @@
     <meta charset="UTF-8">
     <style>
         body, html { margin: 0; padding: 0; height: 100vh; overflow: hidden; font-family: sans-serif; background: #1e1e1e; color: #e0e0e0; }
-        #file-tabs { position: absolute; top: 0; left: 0; width: 100%; background: #3c3c3c; z-index: 11; display: flex; flex-wrap: wrap; padding: 5px 5px 0 5px; box-sizing: border-box; height: 40px; }
+        #file-tabs { position: absolute; top: 0; left: 0; width: 100%; background: #3c3c3c; z-index: 11; display: flex; flex-wrap: wrap; padding: 5px 5px 0 50px; box-sizing: border-box; height: 40px; }
         .tab { background: #2d2d2d; color: #ccc; padding: 8px 15px; cursor: pointer; border-top-left-radius: 4px; border-top-right-radius: 4px; margin-right: 2px; position: relative; font-size: 14px; }
         .tab:hover { background: #4a4a4a; }
         .tab.active { background: #272822; color: #fff; border-bottom: 2px solid #f92672; }
@@ -83,6 +83,48 @@
         #importBtn, #exportBtn { display: inline-block; margin-top: 10px; padding: 5px 10px; background: #4CAF50; color: white; border: none; cursor: pointer; }
         #importBtn:hover, #exportBtn:hover { background: #45a049; }
         
+        .live-update-switch {
+          position: absolute;
+          top: 10px;
+          left: 15px;
+          width: 28px;
+          height: 16px;
+          z-index: 12;
+        }
+        .live-update-switch input { display: none; }
+        
+        .slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: #555;
+          transition: .4s;
+          border-radius: 16px;
+        }
+        
+        .slider:before {
+          position: absolute;
+          content: "";
+          height: 12px;
+          width: 12px;
+          left: 2px;
+          bottom: 2px;
+          background-color: #ccc;
+          transition: .4s;
+          border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+          background-color: #292622;
+        }
+        
+        input:checked + .slider:before {
+          transform: translateX(12px);
+        }
+
         #menu-controls {
             flex: 0 0 180px;
             display: flex;
@@ -109,8 +151,8 @@
             margin-bottom: 0;
         }
         .export-arrow {
-            display: inline-flex; /* Always take up space */
-            visibility: hidden; /* Hide by default without affecting layout */
+            display: inline-flex;
+            visibility: hidden;
             align-items: center;
             justify-content: center;
             width: 20px;
@@ -139,6 +181,10 @@
     </style>
 </head>
 <body>
+    <label class="live-update-switch">
+        <input type="checkbox" id="liveUpdateToggle" checked>
+        <span class="slider"></span>
+    </label>
     <div id="file-tabs"></div>
     <div id="editor"></div>
     <iframe id="scene"></iframe>
@@ -456,12 +502,23 @@ function updateScene() {
 
 editor.on("change", updateScene);
 
+const liveUpdateToggle = document.getElementById('liveUpdateToggle');
+liveUpdateToggle.addEventListener('change', function() {
+    if (this.checked) {
+        editor.on("change", updateScene);
+        updateScene(); 
+    } else {
+        editor.off("change", updateScene);
+    }
+});
+
 let showingEditor = false;
 let showingConsole = false;
 function toggleEditor() {
     if (showingEditor) {
         editor.getWrapperElement().style.display = 'none';
-        fileTabsContainer.style.display = 'none';
+        document.getElementById('file-tabs').style.display = 'none';
+        document.querySelector('.live-update-switch').style.display = 'none';
         currentFileName.style.display = 'none'; 
         scene.focus();
         scene.style.zIndex = '5';
@@ -469,7 +526,8 @@ function toggleEditor() {
         scene.style.pointerEvents = 'auto';
     } else {
         editor.getWrapperElement().style.display = 'block';
-        fileTabsContainer.style.display = 'flex';
+        document.getElementById('file-tabs').style.display = 'flex';
+        document.querySelector('.live-update-switch').style.display = 'block';
         updateCurrentFileName();
         editor.focus();
         scene.style.zIndex = '0';
@@ -521,7 +579,7 @@ window.addEventListener('beforeunload', e => e.stopImmediatePropagation());
 
 function toggleMenu() {
     if (menu.style.display === 'none' || menu.style.display === '') {
-        menu.style.display = 'flex'; // Use flex for the new layout
+        menu.style.display = 'flex';
         colorBtn.style.display = 'block';
         loadSavedCodes();
     } else {
@@ -581,11 +639,9 @@ async function loadProject(projectId) {
     };
 }
 
-// --- COMPLETELY REWRITTEN AND MODIFIED FUNCTION ---
 async function loadSavedCodes() {
     const savedProjects = await getCodes();
 
-    // 1. Create the new structure inside the menu, including the new "Export All" button
     menu.innerHTML = `
         <div id="menu-controls">
             <div id="menu-main-actions">
@@ -600,7 +656,6 @@ async function loadSavedCodes() {
 
     const projectList = menu.querySelector('#project-list');
 
-    // 2. Populate the project list
     savedProjects.forEach(project => {
         const button = document.createElement('button');
         
@@ -663,17 +718,14 @@ async function loadSavedCodes() {
         projectList.appendChild(button);
     });
 
-    // 3. Set up listeners for the control buttons
     document.getElementById('saveBtn').onclick = () => saveCurrentCode(false);
     
     document.getElementById('exportToggleBtn').onclick = () => {
         projectList.classList.toggle('show-export-arrows');
     };
 
-    // Add listener for the new "Export All" button
     document.getElementById('exportAllBtn').onclick = exportAllProjectsAsZip;
 
-    // 4. Update the info panel
     updateFileInfo();
 }
 
@@ -697,7 +749,6 @@ async function exportProjectAsZip(projectId) {
                         const a = document.createElement("a");
                         const url = URL.createObjectURL(content);
                         a.href = url;
-                        // ИСПРАВЛЕНО: Заменяем только недопустимые символы, сохраняя кириллицу
                         const projectName = (project.name || `project-${project.id}`).replace(/[\\/:*?"<>|]/g, '_');
                         a.download = `${projectName}.zip`;
                         document.body.appendChild(a);
@@ -720,7 +771,6 @@ async function exportProjectAsZip(projectId) {
     }
 }
 
-// --- NEW FUNCTION TO EXPORT ALL PROJECTS ---
 async function exportAllProjectsAsZip() {
     try {
         const allProjects = await getCodes();
@@ -733,12 +783,10 @@ async function exportAllProjectsAsZip() {
 
         for (const project of allProjects) {
             if (project && project.files) {
-                // ИСПРАВЛЕНО: Заменяем только недопустимые символы, сохраняя кириллицу
                 const folderName = (project.name || `project-${project.id}`).replace(/[\\/:*?"<>|]/g, '_');
                 const projectFolder = zip.folder(folderName);
                 
                 for (const filename in project.files) {
-                    // Add each file to the project's folder
                     if(projectFolder) {
                        projectFolder.file(filename, project.files[filename]);
                     }
@@ -746,7 +794,6 @@ async function exportAllProjectsAsZip() {
             }
         }
 
-        // Generate the zip file and trigger download
         zip.generateAsync({ type: "blob" })
             .then(function(content) {
                 const a = document.createElement("a");
