@@ -2,7 +2,7 @@
 
 ## ✨ Features
 
-*   **Live Reload:** See your changes instantly in the preview pane as you type
+*   **Live code preview** You can toggle it in top left corner
 *   **Multi-File Support:** Work with `index.html`, `.js`, `.css` and other files
 *   **Auto-Save** to your browser's IndexedDB. Create, load, rename, delete projects
 *   **Code Injection:** `//<<filename` It's like include, but better. Perfect for organizing
