@@ -83,30 +83,27 @@
         #importBtn, #exportBtn { display: inline-block; margin-top: 10px; padding: 5px 10px; background: #4CAF50; color: white; border: none; cursor: pointer; }
         #importBtn:hover, #exportBtn:hover { background: #45a049; }
         
-        /* --- NEW AND MODIFIED STYLES START --- */
         #menu-controls {
-            flex: 0 0 180px; /* Fixed width for the left panel */
+            flex: 0 0 180px;
             display: flex;
             flex-direction: column;
         }
-        /* New wrapper for vertical centering */
         #menu-main-actions {
-            flex: 1; /* Occupy available space to allow centering */
+            flex: 1;
             display: flex;
             flex-direction: column;
-            justify-content: center; /* Vertically center the buttons */
+            justify-content: center;
         }
         #project-list {
-            flex: 1 1 auto; /* Make it take remaining space */
-            overflow-y: auto; /* This is the scrollable part */
-            max-height: calc(80vh - 40px); /* Account for #menu padding */
+            flex: 1 1 auto;
+            overflow-y: auto;
+            max-height: calc(80vh - 40px);
         }
-        /* Set min-width for project buttons */
+
         #project-list button {
             min-width: 180px;
         }
         #menu-controls #fileInfo {
-            /* margin-top: auto; is no longer needed */
             padding-top: 10px;
             border-top: 1px solid #444;
             margin-bottom: 0;
@@ -129,9 +126,8 @@
             transition: background-color 0.2s, color 0.2s, filter 0.3s;
         }
         #project-list.show-export-arrows .export-arrow {
-            visibility: visible; /* Show the arrow */
+            visibility: visible;
         }
-        /* --- NEW AND MODIFIED STYLES END --- */
 
         .export-arrow:hover {
             background-color: #555;
@@ -212,8 +208,8 @@ const initialFiles = {
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>FS Code Editor 2</h1>
-    <p>Edit the files and see the changes live. Press Alt to toggle editor.</p>
+    <h1>CodiuM</h1>
+    <p>Make coding easier</p>
     <script src="main.js"><\/script>
 </body>
 </html>`,
