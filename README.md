@@ -1,4 +1,4 @@
-# Full Screen Code Editor 2
+# CodiuM
 
 ## ✨ Features
 
