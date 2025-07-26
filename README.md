@@ -30,11 +30,13 @@
 | `Shift` + `Mouse Wheel` | Increase/decrease the editor's background opacity |
 
 ### File Tabs
+| Action | Description |
 | :--- | :--- |
 | **Middle Click** | Close file tab |
 | **Right Click** | Rename file |
 
 ### Project Menu (ESC)
+| Action | Description |
 | :--- | :--- |
 | **Left Click** | Load project |
 | **Middle Click** | Delete project |
