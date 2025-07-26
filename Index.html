@@ -1,0 +1,865 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body, html { margin: 0; padding: 0; height: 100vh; overflow: hidden; font-family: sans-serif; background: #1e1e1e; color: #e0e0e0; }
+        #file-tabs { position: absolute; top: 0; left: 0; width: 100%; background: #3c3c3c; z-index: 11; display: flex; flex-wrap: wrap; padding: 5px 5px 0 5px; box-sizing: border-box; height: 40px; }
+        .tab { background: #2d2d2d; color: #ccc; padding: 8px 15px; cursor: pointer; border-top-left-radius: 4px; border-top-right-radius: 4px; margin-right: 2px; position: relative; font-size: 14px; }
+        .tab:hover { background: #4a4a4a; }
+        .tab.active { background: #272822; color: #fff; border-bottom: 2px solid #f92672; }
+        #add-file-btn { background: #2d2d2d; color: #ccc; padding: 8px 12px; cursor: pointer; border-top-left-radius: 4px; border-top-right-radius: 4px; font-weight: bold; }
+        #add-file-btn:hover { background: #4a4a4a; }
+        #editor { top: 40px; height: calc(100% - 40px); z-index: 10; }
+        #editor, #scene, #console { width: 100%; border: none; position: absolute; left: 0; }
+        #scene { height: 100%; top: 0; }
+        #editor .CodeMirror { height: 100%; background-color: transparent; }
+        .cm-s-monokai.CodeMirror { background: #272822; color: #f8f8f2; }
+        .cm-s-monokai div.CodeMirror-selected { background: #49483e; }
+        .cm-s-monokai .CodeMirror-line::selection, .cm-s-monokai .CodeMirror-line>span::selection, .cm-s-monokai .CodeMirror-line>span>span::selection { background: rgba(73, 72, 62, .99); }
+        .cm-s-monokai .CodeMirror-line::-moz-selection, .cm-s-monokai .CodeMirror-line>span::-moz-selection, .cm-s-monokai .CodeMirror-line>span>span::-moz-selection { background: rgba(73, 72, 62, .99); }
+        .cm-s-monokai .CodeMirror-gutters { background: #272822; border-right: 0; }
+        .cm-s-monokai .CodeMirror-guttermarker { color: white; }
+        .cm-s-monokai .CodeMirror-guttermarker-subtle { color: #d0d0d0; }
+        .cm-s-monokai .CodeMirror-linenumber { color: #d0d0d0; }
+        .cm-s-monokai .CodeMirror-cursor { border-left: 1px solid #f8f8f0; }
+        .cm-s-monokai span.cm-comment { color: #75715e; }
+        .cm-s-monokai span.cm-atom { color: #ae81ff; }
+        .cm-s-monokai span.cm-number { color: #ae81ff; }
+        .cm-s-monokai span.cm-comment.cm-attribute { color: #97b757; }
+        .cm-s-monokai span.cm-comment.cm-def { color: #bc9262; }
+        .cm-s-monokai span.cm-comment.cm-tag { color: #bc6283; }
+        .cm-s-monokai span.cm-comment.cm-type { color: #5998a6; }
+        .cm-s-monokai span.cm-attribute, .cm-s-monokai span.cm-property { color: #a6e22e; }
+        .cm-s-monokai span.cm-keyword { color: #f92672; }
+        .cm-s-monokai span.cm-string { color: #e6db74; }
+        .cm-s-monokai span.cm-variable { color: #f8f8f2; }
+        .cm-s-monokai span.cm-variable-2 { color: #9effff; }
+        .cm-s-monokai span.cm-variable-3, .cm-s-monokai span.cm-type { color: #66d9ef; }
+        .cm-s-monokai span.cm-def { color: #fd971f; }
+        .cm-s-monokai span.cm-bracket { color: #f8f8f2; }
+        .cm-s-monokai span.cm-tag { color: #f92672; }
+        .cm-s-monokai span.cm-header { color: #ae81ff; }
+        .cm-s-monokai span.cm-link { color: #ae81ff; }
+        .cm-s-monokai span.cm-error { background: #f92672; color: #f8f8f0; }
+        .cm-s-monokai .CodeMirror-activeline-background { background: #373831; }
+        .cm-s-monokai .CodeMirror-matchingbracket { text-decoration: underline; color: white !important; }
+        #console { top: auto; height: 30%; bottom: 0; background-color: rgba(0, 0, 0, 0.8); color: #fff; overflow-y: auto; display: none; z-index: 20; padding: 10px; box-sizing: border-box; font-family: monospace; }
+        .error { color: #ff6b6b; }
+        .log { color: #4ecdc4; }
+        #scene { pointer-events: auto; }
+        #editor { pointer-events: none; }
+        .CodeMirror-matchingbracket { background-color: #ff0000 !important; color: #000000 !important; }
+        .cm-matchhighlight { background-color: #774a77; }
+        .CodeMirror-selection-highlight-scrollbar { background-color: #4a4a4a; }
+        #menu {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(30, 30, 30, 0.95);
+            border: 1px solid #444;
+            padding: 20px;
+            max-height: 80vh;
+            display: none;
+            z-index: 1000;
+            flex-direction: row;
+            gap: 20px;
+            box-sizing: border-box;
+        }
+        #menu button { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px; margin: 5px 0; background: #333; color: #fff; border: none; cursor: pointer; text-align: left; box-sizing: border-box; }
+        #menu button:hover { background: #444; }
+        #menu button.selected { background: #555; }
+        #menu button .name { color: #ff9800; font-weight: bold; display: block; }
+        #saveBtn { background: #4CAF50 !important; }
+        #saveBtn:hover { background: #45a049 !important; }
+        #currentFileName { position: fixed; top: 10px; right: 10px; background: rgba(0, 0, 0, 0.5); padding: 5px 10px; border-radius: 5px; z-index: 1000; }
+        #fileInfo { margin-bottom: 10px; }
+        #colorPicker { position: fixed; top: 50%; right: 20px; transform: translateY(-50%); background: rgba(30, 30, 30, 0.9); border: 1px solid #444; padding: 20px; display: none; flex-direction: column; align-items: center; z-index: 1000; max-height: 80vh; overflow-y: auto; }
+        .color-item { display: flex; align-items: center; margin-bottom: 10px; width: 100%; }
+        .color-item label { flex: 1; margin-right: 10px; }
+        .color-item input[type="color"] { width: 50px; }
+        #colorBtn { display: none; position: fixed; bottom: 10px; right: 10px; padding: 5px 10px; background: #4CAF50; color: white; border: none; cursor: pointer; z-index: 1001; }
+        #colorBtn:hover { background: #45a049; }
+        #importBtn, #exportBtn { display: inline-block; margin-top: 10px; padding: 5px 10px; background: #4CAF50; color: white; border: none; cursor: pointer; }
+        #importBtn:hover, #exportBtn:hover { background: #45a049; }
+        
+        /* --- NEW AND MODIFIED STYLES START --- */
+        #menu-controls {
+            flex: 0 0 180px; /* Fixed width for the left panel */
+            display: flex;
+            flex-direction: column;
+        }
+        /* New wrapper for vertical centering */
+        #menu-main-actions {
+            flex: 1; /* Occupy available space to allow centering */
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Vertically center the buttons */
+        }
+        #project-list {
+            flex: 1 1 auto; /* Make it take remaining space */
+            overflow-y: auto; /* This is the scrollable part */
+            max-height: calc(80vh - 40px); /* Account for #menu padding */
+        }
+        /* Set min-width for project buttons */
+        #project-list button {
+            min-width: 180px;
+        }
+        #menu-controls #fileInfo {
+            /* margin-top: auto; is no longer needed */
+            padding-top: 10px;
+            border-top: 1px solid #444;
+            margin-bottom: 0;
+        }
+        .export-arrow {
+            display: inline-flex; /* Always take up space */
+            visibility: hidden; /* Hide by default without affecting layout */
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            background-color: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 6px;
+            color: #ccc;
+            font-size: 12px;
+            line-height: 1;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: background-color 0.2s, color 0.2s, filter 0.3s;
+        }
+        #project-list.show-export-arrows .export-arrow {
+            visibility: visible; /* Show the arrow */
+        }
+        /* --- NEW AND MODIFIED STYLES END --- */
+
+        .export-arrow:hover {
+            background-color: #555;
+            color: #fff;
+        }
+        .export-arrow.exported {
+            filter: brightness(0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="file-tabs"></div>
+    <div id="editor"></div>
+    <iframe id="scene"></iframe>
+    <div id="console"></div>
+    <div id="menu"></div>
+    <div id="currentFileName"></div>
+    <button id="colorBtn">Color</button>
+    <div id="colorPicker">
+        <div class="color-item"><label for="Comment">Comment</label><input type="color" id="Comment"></div><div class="color-item"><label for="Keyword">Keyword</label><input type="color" id="Keyword"></div><div class="color-item"><label for="String">String</label><input type="color" id="String"></div><div class="color-item"><label for="Number">Number</label><input type="color" id="Number"></div><div class="color-item"><label for="Special">Special</label><input type="color" id="Special"></div><div class="color-item"><label for="Variable">Variable</label><input type="color" id="Variable"></div><div class="color-item"><label for="Property">Property</label><input type="color" id="Property"></div><div class="color-item"><label for="Definition">Definition</label><input type="color" id="Definition"></div><div class="color-item"><label for="Function">Function</label><input type="color" id="Function"></div><div class="color-item"><label for="Operator">Operator</label><input type="color" id="Operator"></div><div class="color-item"><label for="HTMLBracket">HTML Bracket</label><input type="color" id="HTMLBracket"></div><div class="color-item"><label for="HighlightedBracket">Highlighted Bracket</label><input type="color" id="HighlightedBracket"></div><div class="color-item"><label for="Class">Class</label><input type="color" id="Class"></div><div class="color-item"><label for="Regex">Regex</label><input type="color" id="Regex"></div><div class="color-item"><label for="HTMLTag">HTML Tag</label><input type="color" id="HTMLTag"></div><div class="color-item"><label for="HTMLAttribute">HTML Attribute</label><input type="color" id="HTMLAttribute"></div><div class="color-item"><label for="OtherText">Other Text</label><input type="color" id="OtherText"></div><button id="importBtn">Import</button><button id="exportBtn">Export</button>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/codemirror.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/theme/monokai.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/mode/htmlmixed/htmlmixed.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/addon/search/match-highlighter.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/addon/scroll/annotatescrollbar.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/addon/search/matchesonscrollbar.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/addon/mode/simple.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+const editor = CodeMirror(document.getElementById("editor"), {
+    lineNumbers: true,
+    mode: "htmlmixed",
+    theme: "monokai",
+    lineWrapping: true,
+    viewportMargin: Infinity,
+    matchBrackets: true,
+    autoCloseBrackets: true,
+    indentUnit: 4,
+    tabSize: 4,
+    indentWithTabs: false,
+    extraKeys: {
+        "Ctrl-Space": "autocomplete",
+        "Ctrl-S": function(cm) {
+            saveCurrentCode(true);
+            return false;
+        }
+    },
+    highlightSelectionMatches: {showToken: /\w/, annotateScrollbar: true}
+});
+
+const scene = document.getElementById('scene');
+const consoleElem = document.getElementById('console');
+const menu = document.getElementById('menu');
+const currentFileName = document.getElementById('currentFileName');
+const colorPicker = document.getElementById('colorPicker');
+const colorBtn = document.getElementById('colorBtn');
+const importBtn = document.getElementById('importBtn');
+const exportBtn = document.getElementById('exportBtn');
+const fileTabsContainer = document.getElementById('file-tabs');
+
+let files = {};
+let activeFileName = null;
+let currentProjectId = null;
+const blobUrls = [];
+
+const initialFiles = {
+    'index.html': `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Project</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>FS Code Editor 2</h1>
+    <p>Edit the files and see the changes live. Press Alt to toggle editor.</p>
+    <script src="main.js"><\/script>
+</body>
+</html>`,
+    'main.js': `console.log('Script loaded from main.js!');
+
+document.body.style.backgroundColor = '#2d2d2d';
+
+//<<utils.js
+`,
+    'utils.js': `console.log("This message comes from utils.js!");`,
+    'style.css': `body {
+    font-family: sans-serif;
+    color: #eee;
+    text-align: center;
+    padding-top: 50px;
+}`
+};
+
+function getModeForFilename(filename) {
+    if (filename.endsWith('.js')) return 'javascript';
+    if (filename.endsWith('.html')) return 'htmlmixed';
+    if (filename.endsWith('.css')) return 'css';
+    return 'text/plain';
+}
+
+function initializeEditorWithFiles(fileSet) {
+    files = {};
+    for (const filename in fileSet) {
+        const code = fileSet[filename];
+        const mode = getModeForFilename(filename);
+        files[filename] = {
+            code: code,
+            doc: CodeMirror.Doc(code, mode)
+        };
+    }
+    
+    activeFileName = 'index.html';
+    if (!files[activeFileName]) activeFileName = Object.keys(files)[0] || null;
+
+    if (activeFileName) {
+        editor.swapDoc(files[activeFileName].doc);
+        editor.setOption('mode', getModeForFilename(activeFileName));
+    }
+    
+    renderTabs();
+    updateScene();
+}
+
+function renderTabs() {
+    fileTabsContainer.innerHTML = '';
+    Object.keys(files).sort((a, b) => a === 'index.html' ? -1 : 1).forEach(filename => {
+        const tab = document.createElement('div');
+        tab.className = 'tab';
+        tab.textContent = filename;
+        if (filename === activeFileName) {
+            tab.classList.add('active');
+        }
+
+        tab.onclick = () => switchTab(filename);
+
+        tab.addEventListener('mousedown', (e) => {
+            if (e.button === 1) {
+                e.preventDefault();
+                closeFile(filename);
+            }
+        });
+
+        tab.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            const newName = prompt(`Переименовать файл "${filename}":`, filename);
+            renameFile(filename, newName);
+        });
+
+        fileTabsContainer.appendChild(tab);
+    });
+
+    const addBtn = document.createElement('div');
+    addBtn.id = 'add-file-btn';
+    addBtn.textContent = '+';
+    addBtn.title = 'Новый файл';
+    addBtn.onclick = createNewFile;
+    fileTabsContainer.appendChild(addBtn);
+}
+
+
+function switchTab(filename) {
+    if (filename === activeFileName || !files[filename]) return;
+
+    if (activeFileName && files[activeFileName]) {
+        files[activeFileName].code = editor.getValue();
+    }
+
+    activeFileName = filename;
+    editor.swapDoc(files[filename].doc);
+    editor.setOption('mode', getModeForFilename(activeFileName));
+    renderTabs();
+    editor.focus();
+}
+
+function createNewFile() {
+    const filename = prompt("Введите имя нового файла (например, 'app.js', 'styles.css'):");
+    if (filename && !files[filename]) {
+        files[filename] = {
+            code: '',
+            doc: CodeMirror.Doc('', getModeForFilename(filename))
+        };
+        switchTab(filename);
+    } else if (files[filename]) {
+        alert("Файл с таким именем уже существует.");
+    }
+}
+
+function closeFile(filename) {
+    if (filename === 'index.html') {
+        alert("Нельзя закрыть index.html.");
+        return;
+    }
+    delete files[filename];
+    if (activeFileName === filename) {
+        switchTab('index.html');
+    }
+    renderTabs();
+    updateScene();
+}
+
+function renameFile(oldName, newName) {
+    if (oldName === 'index.html') {
+        alert("Нельзя переименовать index.html.");
+        return;
+    }
+    if (!newName || newName.trim() === '' || newName === oldName) {
+        return;
+    }
+    if (files[newName]) {
+        alert(`Файл с именем "${newName}" уже существует.`);
+        return;
+    }
+
+    const content = files[oldName].doc.getValue();
+
+    const newMode = getModeForFilename(newName);
+    files[newName] = {
+        code: content,
+        doc: CodeMirror.Doc(content, newMode)
+    };
+    
+    delete files[oldName];
+
+    if (activeFileName === oldName) {
+        activeFileName = newName;
+        editor.swapDoc(files[newName].doc);
+    }
+
+    renderTabs();
+    updateScene();
+}
+
+function resolveInjections(code, processingStack = new Set()) {
+    const injectionRegex = /\/\/\s*<<\s*([\w\d\._-]+)/g;
+
+    return code.replace(injectionRegex, (match, fileName) => {
+        const trimmedFileName = fileName.trim();
+
+        if (processingStack.has(trimmedFileName)) {
+            const errorMsg = `Circular dependency detected: ${[...processingStack, trimmedFileName].join(' -> ')}`;
+            logToConsole('error', errorMsg);
+            return `console.error(${JSON.stringify(errorMsg)});`;
+        }
+
+        if (!files[trimmedFileName]) {
+            const errorMsg = `Injection error: File "${trimmedFileName}" not found.`;
+            logToConsole('error', errorMsg);
+            return `console.error(${JSON.stringify(errorMsg)});`;
+        }
+
+        processingStack.add(trimmedFileName);
+        const injectedContent = files[trimmedFileName].code;
+        const resolvedInjectedContent = resolveInjections(injectedContent, processingStack);
+        
+        processingStack.delete(trimmedFileName);
+        
+        return resolvedInjectedContent;
+    });
+}
+
+function updateScene() {
+    blobUrls.forEach(url => URL.revokeObjectURL(url));
+    blobUrls.length = 0;
+
+    if (activeFileName && files[activeFileName]) {
+        files[activeFileName].code = editor.getValue();
+    }
+
+    const htmlCode = files['index.html'] ? files['index.html'].code : '<p style="color:red;">Error: index.html not found.</p>';
+    const doc = new DOMParser().parseFromString(htmlCode, 'text/html');
+
+    doc.querySelectorAll('script').forEach(tag => {
+        const src = tag.getAttribute('src');
+
+        if (src) {
+            if (files[src] && src.endsWith('.js')) {
+                const initialCode = files[src].code;
+                const processedCode = resolveInjections(initialCode, new Set([src]));
+                const blob = new Blob([processedCode], { type: 'application/javascript' });
+                const url = URL.createObjectURL(blob);
+                blobUrls.push(url);
+                tag.src = url;
+            }
+        } else {
+            if (tag.textContent.includes('window.onerror = function')) return;
+
+            const initialCode = tag.textContent;
+            const processedCode = resolveInjections(initialCode, new Set());
+            tag.textContent = processedCode;
+        }
+    });
+
+    doc.querySelectorAll('link[rel="stylesheet"][href]').forEach(tag => {
+        const href = tag.getAttribute('href');
+        if (files[href]) {
+            const blob = new Blob([files[href].code], { type: 'text/css' });
+            const url = URL.createObjectURL(blob);
+            blobUrls.push(url);
+            tag.href = url;
+        }
+    });
+
+    const finalHtml = doc.documentElement.outerHTML;
+    const wrappedCode= `
+        <script>
+            window.onerror = function(message, source, lineno, colno, error) {
+                window.parent.postMessage({type: 'error', content: 'Error: ' + message}, '*');
+                return true;
+            };
+            const originalConsoleLog = console.log;
+            console.log = function() { window.parent.postMessage({type: 'log', content: Array.from(arguments).join(' ')}, '*'); originalConsoleLog.apply(this, arguments); };
+            const originalConsoleError = console.error;
+            console.error = function() { window.parent.postMessage({type: 'error', content: Array.from(arguments).join(' ')}, '*'); originalConsoleError.apply(this, arguments); };
+            window.addEventListener('beforeunload', e => e.stopImmediatePropagation());
+        <\/script>
+    ` + finalHtml;
+    scene.srcdoc = wrappedCode;
+}
+
+editor.on("change", updateScene);
+
+let showingEditor = false;
+let showingConsole = false;
+function toggleEditor() {
+    if (showingEditor) {
+        editor.getWrapperElement().style.display = 'none';
+        fileTabsContainer.style.display = 'none';
+        currentFileName.style.display = 'none'; 
+        scene.focus();
+        scene.style.zIndex = '5';
+        editor.getWrapperElement().style.pointerEvents = 'none';
+        scene.style.pointerEvents = 'auto';
+    } else {
+        editor.getWrapperElement().style.display = 'block';
+        fileTabsContainer.style.display = 'flex';
+        updateCurrentFileName();
+        editor.focus();
+        scene.style.zIndex = '0';
+        editor.getWrapperElement().style.pointerEvents = 'auto';
+        scene.style.pointerEvents = 'none';
+    }
+    showingEditor = !showingEditor;
+}
+function toggleConsole() { consoleElem.style.display = showingConsole ? 'none' : 'block'; showingConsole = !showingConsole; }
+
+let altPressed = false; 
+let shiftAltPressed = false;
+document.addEventListener('keydown', function(event) { if (event.key === 'Escape') { toggleMenu(); } else if (event.altKey && !event.shiftKey && !altPressed) { event.preventDefault(); altPressed = true; toggleEditor(); } else if (event.altKey && event.shiftKey && !shiftAltPressed) { event.preventDefault(); shiftAltPressed = true; toggleConsole(); } });
+document.addEventListener('keyup', function(event) { if (!event.altKey) { altPressed = false; shiftAltPressed = false; } });
+
+scene.addEventListener('load', function() {
+    if (scene.contentWindow) {
+        scene.contentWindow.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                event.preventDefault(); 
+                toggleMenu();
+            } else if (event.altKey && !event.shiftKey && !altPressed) {
+                event.preventDefault();
+                altPressed = true;
+                toggleEditor();
+            } else if (event.altKey && event.shiftKey && !shiftAltPressed) {
+                event.preventDefault();
+                shiftAltPressed = true;
+                toggleConsole();
+            }
+        });
+        scene.contentWindow.addEventListener('keyup', function(event) {
+            if (!event.altKey) {
+                altPressed = false;
+                shiftAltPressed = false;
+            }
+        });
+    }
+});
+
+function logToConsole(type, content) { const logElem = document.createElement('div'); logElem.className = type; logElem.textContent = content; consoleElem.appendChild(logElem); consoleElem.scrollTop = consoleElem.scrollHeight; }
+window.addEventListener('message', function(event) { if (event.source === scene.contentWindow) { logToConsole(event.data.type, event.data.content); } });
+
+editor.getWrapperElement().style.display = 'block'; consoleElem.style.display = 'none'; scene.style.zIndex = '0'; editor.focus(); editor.getWrapperElement().style.pointerEvents = 'auto'; scene.style.pointerEvents = 'none'; showingEditor = true;
+
+let fontSize = 14; editor.getWrapperElement().addEventListener('wheel', function(e) { if (e.ctrlKey) { e.preventDefault(); fontSize += e.deltaY > 0 ? -1 : 1; fontSize = Math.max(8, Math.min(24, fontSize)); editor.getWrapperElement().style.fontSize = fontSize + 'px'; editor.refresh(); } });
+let opacity = 0.5; editor.getWrapperElement().addEventListener('wheel', function(e) { if (e.shiftKey) { e.preventDefault(); opacity += e.deltaY > 0 ? -0.05 : 0.05; opacity = Math.max(0.1, Math.min(1, opacity)); editor.getWrapperElement().style.backgroundColor = `rgba(30, 30, 30, ${opacity})`; } });
+window.addEventListener('beforeunload', e => e.stopImmediatePropagation());
+
+function toggleMenu() {
+    if (menu.style.display === 'none' || menu.style.display === '') {
+        menu.style.display = 'flex'; // Use flex for the new layout
+        colorBtn.style.display = 'block';
+        loadSavedCodes();
+    } else {
+        menu.style.display = 'none';
+        colorBtn.style.display = 'none';
+        colorPicker.style.display = 'none';
+    }
+}
+colorBtn.addEventListener('click', function() { colorPicker.style.display = (colorPicker.style.display === 'none' || colorPicker.style.display === '') ? 'flex' : 'none'; });
+
+let db;
+const DB_NAME = 'CodeEditorDB_Projects'; const DB_VERSION = 1; const STORE_NAME = 'projects';
+function openDB() { return new Promise((resolve, reject) => { const request = indexedDB.open(DB_NAME, DB_VERSION); request.onupgradeneeded = e => { db = e.target.result; if (!db.objectStoreNames.contains(STORE_NAME)) { db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true }); } }; request.onsuccess = e => { db = e.target.result; resolve(db); }; request.onerror = e => reject('Error opening database'); }); }
+function saveCode(projectObj) { return new Promise((resolve, reject) => { const tx = db.transaction([STORE_NAME], 'readwrite'); const store = tx.objectStore(STORE_NAME); const request = store.add(projectObj); request.onsuccess = e => resolve(e.target.result); request.onerror = e => reject('Error saving project'); }); }
+function updateCode(projectObj) { return new Promise((resolve, reject) => { const tx = db.transaction([STORE_NAME], 'readwrite'); const store = tx.objectStore(STORE_NAME); const request = store.put(projectObj); request.onsuccess = e => resolve(e.target.result); request.onerror = e => reject('Error updating project'); }); }
+function deleteCode(id) { return new Promise((resolve, reject) => { const tx = db.transaction([STORE_NAME], 'readwrite'); const store = tx.objectStore(STORE_NAME); const request = store.delete(id); request.onsuccess = () => resolve(); request.onerror = () => reject('Error deleting project'); }); }
+function getCodes() { return new Promise((resolve, reject) => { const tx = db.transaction([STORE_NAME], 'readonly'); const store = tx.objectStore(STORE_NAME); const request = store.getAll(); request.onsuccess = e => { const codes = e.target.result; codes.sort((a, b) => new Date(b.date) - new Date(a.date)); resolve(codes); }; request.onerror = e => reject('Error getting projects'); }); }
+
+async function saveCurrentCode(overwrite = false) {
+    if (activeFileName && files[activeFileName]) files[activeFileName].code = editor.getValue();
+    const filesToSave = {};
+    for (const filename in files) filesToSave[filename] = files[filename].code;
+
+    if (overwrite && currentProjectId !== null) {
+        const tx = db.transaction([STORE_NAME], 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        const getReq = store.get(currentProjectId);
+        getReq.onsuccess = (e) => {
+            const project = e.target.result;
+            if (project) {
+                project.files = filesToSave;
+                project.date = new Date();
+                updateCode(project).then(loadSavedCodes);
+            }
+        };
+    } else {
+        const newProject = { date: new Date(), files: filesToSave, name: '' };
+        const id = await saveCode(newProject);
+        currentProjectId = id;
+        loadSavedCodes();
+    }
+    updateCurrentFileName();
+}
+
+async function loadProject(projectId) {
+    const tx = db.transaction([STORE_NAME], 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.get(projectId);
+    request.onsuccess = async e => {
+        const project = e.target.result;
+        if (project && project.files) {
+            currentProjectId = project.id;
+            initializeEditorWithFiles(project.files);
+            await loadSavedCodes();
+            updateCurrentFileName();
+        }
+    };
+}
+
+// --- COMPLETELY REWRITTEN AND MODIFIED FUNCTION ---
+async function loadSavedCodes() {
+    const savedProjects = await getCodes();
+
+    // 1. Create the new structure inside the menu, including the new "Export All" button
+    menu.innerHTML = `
+        <div id="menu-controls">
+            <div id="menu-main-actions">
+                <button id="saveBtn">Save New Project</button>
+                <button id="exportToggleBtn">Export Projects</button>
+                <button id="exportAllBtn">Export All</button>
+            </div>
+            <div id="fileInfo"></div>
+        </div>
+        <div id="project-list"></div>
+    `;
+
+    const projectList = menu.querySelector('#project-list');
+
+    // 2. Populate the project list
+    savedProjects.forEach(project => {
+        const button = document.createElement('button');
+        
+        const textContainer = document.createElement('span');
+        if (project.name) {
+            textContainer.innerHTML = `<span class="name">${project.name}</span>`;
+        }
+        textContainer.innerHTML += formatDate(new Date(project.date));
+
+        const arrow = document.createElement('span');
+        arrow.innerHTML = '↓';
+        arrow.className = 'export-arrow';
+        arrow.title = 'Экспортировать проект в .zip';
+        
+        arrow.addEventListener('click', (e) => {
+            e.stopPropagation();
+            exportProjectAsZip(project.id);
+            const clickedArrow = e.currentTarget;
+            clickedArrow.classList.add('exported');
+            setTimeout(() => {
+                clickedArrow.classList.remove('exported');
+            }, 300000);
+        });
+
+        button.appendChild(textContainer);
+        button.appendChild(arrow);
+        
+        button.onclick = () => loadProject(project.id);
+        
+        button.oncontextmenu = e => {
+            e.preventDefault();
+            const name = prompt('Enter a name for this project:', project.name);
+            if (name !== null) {
+                project.name = name;
+                updateCode(project).then(() => {
+                    loadSavedCodes();
+                    updateCurrentFileName();
+                });
+            }
+        };
+
+        button.onmousedown = e => {
+            if (e.button === 1) {
+                e.preventDefault();
+                deleteCode(project.id).then(() => {
+                    if (currentProjectId === project.id) {
+                        currentProjectId = null;
+                    }
+                    loadSavedCodes();
+                    updateCurrentFileName();
+                    updateFileInfo();
+                });
+            }
+        };
+        
+        if (project.id === currentProjectId) {
+            button.classList.add('selected');
+        }
+        
+        projectList.appendChild(button);
+    });
+
+    // 3. Set up listeners for the control buttons
+    document.getElementById('saveBtn').onclick = () => saveCurrentCode(false);
+    
+    document.getElementById('exportToggleBtn').onclick = () => {
+        projectList.classList.toggle('show-export-arrows');
+    };
+
+    // Add listener for the new "Export All" button
+    document.getElementById('exportAllBtn').onclick = exportAllProjectsAsZip;
+
+    // 4. Update the info panel
+    updateFileInfo();
+}
+
+
+async function exportProjectAsZip(projectId) {
+    try {
+        const tx = db.transaction([STORE_NAME], 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const request = store.get(projectId);
+        
+        request.onsuccess = e => {
+            const project = e.target.result;
+            if (project && project.files) {
+                const zip = new JSZip();
+                for (const filename in project.files) {
+                    zip.file(filename, project.files[filename]);
+                }
+                
+                zip.generateAsync({ type: "blob" })
+                    .then(function(content) {
+                        const a = document.createElement("a");
+                        const url = URL.createObjectURL(content);
+                        a.href = url;
+                        // ИСПРАВЛЕНО: Заменяем только недопустимые символы, сохраняя кириллицу
+                        const projectName = (project.name || `project-${project.id}`).replace(/[\\/:*?"<>|]/g, '_');
+                        a.download = `${projectName}.zip`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    });
+            } else {
+                alert('Данные проекта не найдены.');
+            }
+        };
+
+        request.onerror = e => {
+            console.error("Не удалось получить проект для экспорта:", e);
+            alert("Ошибка: Не удалось получить данные проекта для экспорта.");
+        };
+    } catch (error) {
+        console.error("Ошибка функции экспорта:", error);
+        alert("Произошла ошибка во время экспорта.");
+    }
+}
+
+// --- NEW FUNCTION TO EXPORT ALL PROJECTS ---
+async function exportAllProjectsAsZip() {
+    try {
+        const allProjects = await getCodes();
+        if (allProjects.length === 0) {
+            alert("Нет сохраненных проектов для экспорта.");
+            return;
+        }
+
+        const zip = new JSZip();
+
+        for (const project of allProjects) {
+            if (project && project.files) {
+                // ИСПРАВЛЕНО: Заменяем только недопустимые символы, сохраняя кириллицу
+                const folderName = (project.name || `project-${project.id}`).replace(/[\\/:*?"<>|]/g, '_');
+                const projectFolder = zip.folder(folderName);
+                
+                for (const filename in project.files) {
+                    // Add each file to the project's folder
+                    if(projectFolder) {
+                       projectFolder.file(filename, project.files[filename]);
+                    }
+                }
+            }
+        }
+
+        // Generate the zip file and trigger download
+        zip.generateAsync({ type: "blob" })
+            .then(function(content) {
+                const a = document.createElement("a");
+                const url = URL.createObjectURL(content);
+                a.href = url;
+                a.download = `all_projects_export.zip`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+
+    } catch (error) {
+        console.error("Ошибка при экспорте всех проектов:", error);
+        alert("Произошла ошибка во время экспорта всех проектов.");
+    }
+}
+
+
+function formatDate(date) { const diff = (new Date() - date) / 1000; if(diff < 60) return `${Math.round(diff)}s ago`; if(diff < 3600) return `${Math.round(diff/60)}m ago`; if(diff < 86400) return `${Math.round(diff/3600)}h ago`; return `${Math.round(diff/86400)}d ago`; }
+
+function updateCurrentFileName() { if (currentProjectId === null) { currentFileName.style.display = 'none'; return; } getCodes().then(projects => { const currentProject = projects.find(p => p.id === currentProjectId); if (currentProject && currentProject.name) { currentFileName.textContent = `Project: ${currentProject.name}`; currentFileName.style.display = 'block'; } else { currentFileName.style.display = 'none'; } }); }
+function updateFileInfo() { getCodes().then(projects => { const totalSize = projects.reduce((acc, p) => acc + JSON.stringify(p.files).length, 0); const fileInfoEl = document.getElementById('fileInfo'); if(fileInfoEl) fileInfoEl.textContent = `${(totalSize/1024).toFixed(2)} KB, Projects: ${projects.length}`; }); }
+
+const colorTypes = { Comment: 'comment', Keyword: 'keyword', String: 'string', Number: 'number', Special: 'atom', Variable: 'variable', Property: 'property', Definition: 'def', Function: 'variable-2', Operator: 'operator', HTMLBracket: 'bracket', HighlightedBracket: 'matchingbracket', Class: 'variable-3', Regex: 'string-2', HTMLTag: 'tag', HTMLAttribute: 'attribute', OtherText: 'text' };
+const defaultColors = {
+    "Comment": "#04ff00",
+    "Keyword": "#0064ff",
+    "String": "#ffff00",
+    "Number": "#ffffff",
+    "Special": "#ff00ae",
+    "Variable": "#c880ff",
+    "Property": "#757ad7",
+    "Definition": "#ff8000",
+    "Function": "#00b3ff",
+    "Operator": "#ffffff",
+    "HTMLBracket": "#fe2aec",
+    "HighlightedBracket": "#ff0000",
+    "Class": "#00ff88",
+    "Regex": "#ff00ff",
+    "HTMLTag": "#00b3ff",
+    "HTMLAttribute": "#ff7aff",
+    "OtherText": "#878787"
+};
+
+function changeColor(type) {
+    const color = document.getElementById(type).value;
+    const style = document.createElement('style');
+    document.head.appendChild(style);
+    const sheet = style.sheet;
+    if (type === 'HighlightedBracket') sheet.insertRule(`.cm-s-monokai .CodeMirror-${colorTypes[type]} { background-color: ${color} !important; color: #000000 !important; }`, 0);
+    else if (type === 'OtherText') sheet.insertRule(`.cm-s-monokai { color: ${color} !important; }`, 0);
+    else sheet.insertRule(`.cm-s-monokai span.cm-${colorTypes[type]} { color: ${color} !important; }`, 0);
+    localStorage.setItem(`color-${type}`, color);
+}
+
+function loadColors() {
+    for (const type in colorTypes) {
+        const color = localStorage.getItem(`color-${type}`) || defaultColors[type];
+        if (color) {
+            document.getElementById(type).value = color;
+            changeColor(type);
+        }
+    }
+}
+for (const type in colorTypes) document.getElementById(type).addEventListener('change', () => changeColor(type));
+
+function exportSettings() {
+    const settings = {};
+    for (const type in colorTypes) settings[type] = localStorage.getItem(`color-${type}`);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(settings)], {type: "application/json"}));
+    a.download = "code_editor_settings.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+}
+
+function importSettings() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = e => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = e => {
+            const settings = JSON.parse(e.target.result);
+            for (const type in settings) if (colorTypes.hasOwnProperty(type)) {
+                localStorage.setItem(`color-${type}`, settings[type]);
+                document.getElementById(type).value = settings[type];
+                changeColor(type);
+            }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+}
+exportBtn.addEventListener('click', exportSettings);
+importBtn.addEventListener('click', importSettings);
+
+openDB().then(() => {
+    getCodes().then(savedProjects => {
+        if (savedProjects.length > 0) {
+            loadProject(savedProjects[0].id);
+        } else {
+            initializeEditorWithFiles(initialFiles);
+        }
+        loadColors();
+    });
+});
+    </script>
+</body>
+</html>
