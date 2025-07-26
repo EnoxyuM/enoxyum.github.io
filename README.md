@@ -4,7 +4,7 @@
 
 *   **Live Reload:** See your changes instantly in the preview pane as you type
 *   **Multi-File Support:** Work with `index.html`, `.js`, `.css` and other files
-*   **Project Persistence:** All projects are automatically saved to your browser's IndexedDB. You can create, load, rename, and delete projects
+*   All projects are automatically saved to your browser's IndexedDB. You can create, load, rename, and delete projects
 *   **Code Injection:** Include one JS file within another using a special comment: `//<<filename`. This is perfect for organizing
 *   **Console:** An in-app console that captures logs and errors from the live preview
 *   **Code Editor:** Syntax highlighting, bracket matching, selection highlighting, line numbers
