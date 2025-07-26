@@ -4,13 +4,13 @@
 
 *   **Live Reload:** See your changes instantly in the preview pane as you type
 *   **Multi-File Support:** Work with `index.html`, `.js`, `.css` and other files
-*   All projects are automatically saved to your browser's IndexedDB. You can create, load, rename, and delete projects
-*   **Code Injection:** Include one JS file within another using a special comment: `//<<filename`. This is perfect for organizing
-*   **Console:** An in-app console that captures logs and errors from the live preview
-*   **Code Editor:** Syntax highlighting, bracket matching, selection highlighting, line numbers
-*   **Theme Customization:** It's in ESC Menu
-*   **Export:** Export any single project or all your projects as a ZIP file
+*   **Auto-Save** to your browser's IndexedDB. Create, load, rename, delete projects
+*   **Code Injection:** `//<<filename` It's like include, but better. Perfect for organizing
+*   **Console** that captures logs and errors from the live preview
+*   **Code Editor:** Syntax highlighting, bracket matching, selection highlighting, etc
+*   **Export** any single project or all your projects as a ZIP file
 *   **Other:** Change editor font size and even the editor's background opacity on the fly
+*   **Theme Customization:** It's in ESC Menu
 
 
 ## ⌨️ Keyboard & Mouse Shortcuts
