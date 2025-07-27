@@ -10,6 +10,10 @@
         .tab { background: #2d2d2d; color: #ccc; padding: 8px 15px; cursor: pointer; border-top-left-radius: 4px; border-top-right-radius: 4px; margin-right: 2px; position: relative; font-size: 14px; }
         .tab:hover { background: #4a4a4a; }
         .tab.active { background: #272822; color: #fff; border-bottom: 2px solid #f92672; }
+        /* СТИЛЬ ДЛЯ ПЕРЕТАСКИВАЕМОЙ ВКЛАДКИ */
+        .tab.dragging {
+            opacity: 0.5;
+        }
         #add-file-btn { background: #2d2d2d; color: #ccc; padding: 8px 12px; cursor: pointer; border-top-left-radius: 4px; border-top-right-radius: 4px; font-weight: bold; }
         #add-file-btn:hover { background: #4a4a4a; }
         #editor { top: 40px; height: calc(100% - 40px); z-index: 10; }
@@ -244,8 +248,10 @@ const exportBtn = document.getElementById('exportBtn');
 const fileTabsContainer = document.getElementById('file-tabs');
 
 let files = {};
+let fileOrder = []; // << НОВЫЙ МАССИВ ДЛЯ ХРАНЕНИЯ ПОРЯДКА ФАЙЛОВ
 let activeFileName = null;
 let currentProjectId = null;
+let currentSortMode = localStorage.getItem('projectSortMode') || 'created';
 const blobUrls = [];
 
 const initialFiles = {
@@ -284,7 +290,7 @@ function getModeForFilename(filename) {
     return 'text/plain';
 }
 
-function initializeEditorWithFiles(fileSet) {
+function initializeEditorWithFiles(fileSet, loadedFileOrder) {
     files = {};
     for (const filename in fileSet) {
         const code = fileSet[filename];
@@ -295,10 +301,29 @@ function initializeEditorWithFiles(fileSet) {
         };
     }
     
-    activeFileName = 'index.html';
-    if (!files[activeFileName]) activeFileName = Object.keys(files)[0] || null;
+    if (loadedFileOrder && Array.isArray(loadedFileOrder) && loadedFileOrder.length > 0) {
+        // Используем загруженный порядок, но "чистим" его
+        const cleanOrder = loadedFileOrder.filter(f => files[f]);
+        const orderedFiles = new Set(cleanOrder);
+        for (const filename in files) {
+            if (!orderedFiles.has(filename)) {
+                cleanOrder.push(filename);
+            }
+        }
+        fileOrder = cleanOrder;
+    } else {
+        // Создаем порядок по умолчанию, если он не был предоставлен
+        fileOrder = Object.keys(files).sort((a, b) => {
+            if (a === 'index.html') return -1;
+            if (b === 'index.html') return 1;
+            return a.localeCompare(b);
+        });
+    }
 
-    if (activeFileName) {
+    activeFileName = 'index.html';
+    if (!files[activeFileName]) activeFileName = fileOrder.length > 0 ? fileOrder[0] : null;
+
+    if (activeFileName && files[activeFileName]) {
         editor.swapDoc(files[activeFileName].doc);
         editor.setOption('mode', getModeForFilename(activeFileName));
     }
@@ -309,10 +334,21 @@ function initializeEditorWithFiles(fileSet) {
 
 function renderTabs() {
     fileTabsContainer.innerHTML = '';
-    Object.keys(files).sort((a, b) => a === 'index.html' ? -1 : 1).forEach(filename => {
+    
+    // Используем массив fileOrder для отрисовки вкладок в правильном порядке
+    fileOrder.forEach(filename => {
+        if (!files[filename]) return; // Проверка на случай рассогласования
+        
         const tab = document.createElement('div');
         tab.className = 'tab';
         tab.textContent = filename;
+        tab.dataset.filename = filename; // Для легкой идентификации
+
+        // Делаем вкладку перетаскиваемой, кроме index.html
+        if (filename !== 'index.html') {
+            tab.draggable = true;
+        }
+
         if (filename === activeFileName) {
             tab.classList.add('active');
         }
@@ -320,16 +356,25 @@ function renderTabs() {
         tab.onclick = () => switchTab(filename);
 
         tab.addEventListener('mousedown', (e) => {
-            if (e.button === 1) {
+            if (e.button === 1) { // Закрытие по средней кнопке мыши
                 e.preventDefault();
                 closeFile(filename);
             }
         });
 
-        tab.addEventListener('contextmenu', (e) => {
+        tab.addEventListener('contextmenu', (e) => { // Переименование по правому клику
             e.preventDefault();
             const newName = prompt(`Переименовать файл "${filename}":`, filename);
             renameFile(filename, newName);
+        });
+        
+        // Обработчики событий для перетаскивания
+        tab.addEventListener('dragstart', () => {
+            setTimeout(() => tab.classList.add('dragging'), 0);
+        });
+
+        tab.addEventListener('dragend', () => {
+            tab.classList.remove('dragging');
         });
 
         fileTabsContainer.appendChild(tab);
@@ -343,6 +388,42 @@ function renderTabs() {
     fileTabsContainer.appendChild(addBtn);
 }
 
+// Вспомогательная функция для определения, перед каким элементом вставлять перетаскиваемый
+function getDragAfterElement(container, x) {
+    const draggableElements = [...container.querySelectorAll('.tab[draggable="true"]:not(.dragging)')];
+
+    return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = x - box.left - box.width / 2;
+        if (offset < 0 && offset > closest.offset) {
+            return { offset: offset, element: child };
+        } else {
+            return closest;
+        }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+// Глобальные обработчики для контейнера вкладок
+fileTabsContainer.addEventListener('dragover', e => {
+    e.preventDefault();
+    const afterElement = getDragAfterElement(fileTabsContainer, e.clientX);
+    const dragging = document.querySelector('.dragging');
+    if (dragging) {
+        if (afterElement == null) {
+            const addBtn = document.getElementById('add-file-btn');
+            fileTabsContainer.insertBefore(dragging, addBtn);
+        } else {
+            fileTabsContainer.insertBefore(dragging, afterElement);
+        }
+    }
+});
+
+fileTabsContainer.addEventListener('drop', e => {
+    e.preventDefault();
+    // DOM уже обновлен, теперь обновляем наш массив с порядком
+    const newOrderedTabs = fileTabsContainer.querySelectorAll('.tab');
+    fileOrder = Array.from(newOrderedTabs).map(tab => tab.dataset.filename);
+});
 
 function switchTab(filename) {
     if (filename === activeFileName || !files[filename]) return;
@@ -365,6 +446,7 @@ function createNewFile() {
             code: '',
             doc: CodeMirror.Doc('', getModeForFilename(filename))
         };
+        fileOrder.push(filename); // Добавляем новый файл в конец списка
         switchTab(filename);
     } else if (files[filename]) {
         alert("Файл с таким именем уже существует.");
@@ -377,6 +459,13 @@ function closeFile(filename) {
         return;
     }
     delete files[filename];
+    
+    // Удаляем файл из массива порядка
+    const index = fileOrder.indexOf(filename);
+    if (index > -1) {
+        fileOrder.splice(index, 1);
+    }
+
     if (activeFileName === filename) {
         switchTab('index.html');
     }
@@ -398,14 +487,18 @@ function renameFile(oldName, newName) {
     }
 
     const content = files[oldName].doc.getValue();
-
     const newMode = getModeForFilename(newName);
     files[newName] = {
         code: content,
         doc: CodeMirror.Doc(content, newMode)
     };
-    
     delete files[oldName];
+
+    // Обновляем имя файла в массиве порядка
+    const index = fileOrder.indexOf(oldName);
+    if (index > -1) {
+        fileOrder[index] = newName;
+    }
 
     if (activeFileName === oldName) {
         activeFileName = newName;
@@ -599,12 +692,13 @@ function openDB() { return new Promise((resolve, reject) => { const request = in
 function saveCode(projectObj) { return new Promise((resolve, reject) => { const tx = db.transaction([STORE_NAME], 'readwrite'); const store = tx.objectStore(STORE_NAME); const request = store.add(projectObj); request.onsuccess = e => resolve(e.target.result); request.onerror = e => reject('Error saving project'); }); }
 function updateCode(projectObj) { return new Promise((resolve, reject) => { const tx = db.transaction([STORE_NAME], 'readwrite'); const store = tx.objectStore(STORE_NAME); const request = store.put(projectObj); request.onsuccess = e => resolve(e.target.result); request.onerror = e => reject('Error updating project'); }); }
 function deleteCode(id) { return new Promise((resolve, reject) => { const tx = db.transaction([STORE_NAME], 'readwrite'); const store = tx.objectStore(STORE_NAME); const request = store.delete(id); request.onsuccess = () => resolve(); request.onerror = () => reject('Error deleting project'); }); }
-function getCodes() { return new Promise((resolve, reject) => { const tx = db.transaction([STORE_NAME], 'readonly'); const store = tx.objectStore(STORE_NAME); const request = store.getAll(); request.onsuccess = e => { const codes = e.target.result; codes.sort((a, b) => new Date(b.date) - new Date(a.date)); resolve(codes); }; request.onerror = e => reject('Error getting projects'); }); }
+function getCodes() { return new Promise((resolve, reject) => { const tx = db.transaction([STORE_NAME], 'readonly'); const store = tx.objectStore(STORE_NAME); const request = store.getAll(); request.onsuccess = e => resolve(e.target.result); request.onerror = e => reject('Error getting projects'); }); }
 
 async function saveCurrentCode(overwrite = false) {
     if (activeFileName && files[activeFileName]) files[activeFileName].code = editor.getValue();
     const filesToSave = {};
     for (const filename in files) filesToSave[filename] = files[filename].code;
+    const now = new Date();
 
     if (overwrite && currentProjectId !== null) {
         const tx = db.transaction([STORE_NAME], 'readwrite');
@@ -613,15 +707,29 @@ async function saveCurrentCode(overwrite = false) {
         getReq.onsuccess = (e) => {
             const project = e.target.result;
             if (project) {
+                // Если у старого проекта нет даты создания, устанавливаем ее
+                if (!project.createdDate) {
+                    project.createdDate = new Date(project.date);
+                }
                 project.files = filesToSave;
-                project.date = new Date();
+                project.fileOrder = fileOrder; // Сохраняем порядок
+                project.date = now; // Обновляем дату последнего изменения
                 updateCode(project).then(loadSavedCodes);
+                localStorage.setItem('lastOpenedProjectId', currentProjectId);
             }
         };
     } else {
-        const newProject = { date: new Date(), files: filesToSave, name: '' };
+        // Создаем новый проект, устанавливая обе даты
+        const newProject = { 
+            date: now, 
+            createdDate: now, 
+            files: filesToSave, 
+            fileOrder: fileOrder, // Сохраняем порядок
+            name: '' 
+        };
         const id = await saveCode(newProject);
         currentProjectId = id;
+        localStorage.setItem('lastOpenedProjectId', currentProjectId);
         loadSavedCodes();
     }
     updateCurrentFileName();
@@ -635,7 +743,8 @@ async function loadProject(projectId) {
         const project = e.target.result;
         if (project && project.files) {
             currentProjectId = project.id;
-            initializeEditorWithFiles(project.files);
+            localStorage.setItem('lastOpenedProjectId', project.id); // Запоминаем ID
+            initializeEditorWithFiles(project.files, project.fileOrder); // Передаем порядок файлов
             await loadSavedCodes();
             updateCurrentFileName();
         }
@@ -645,12 +754,21 @@ async function loadProject(projectId) {
 async function loadSavedCodes() {
     const savedProjects = await getCodes();
 
+    // Сортировка проектов в зависимости от выбранного режима
+    savedProjects.sort((a, b) => {
+        // Для старых проектов используем `date` если `createdDate` отсутствует
+        const dateA = currentSortMode === 'created' ? (a.createdDate || a.date) : a.date;
+        const dateB = currentSortMode === 'created' ? (b.createdDate || b.date) : b.date;
+        return new Date(dateB) - new Date(dateA);
+    });
+
     menu.innerHTML = `
         <div id="menu-controls">
             <div id="menu-main-actions">
                 <button id="saveBtn">Save New Project</button>
                 <button id="exportToggleBtn">Export Projects</button>
                 <button id="exportAllBtn">Export All</button>
+                <button id="sortBtn"></button>
             </div>
             <div id="fileInfo"></div>
         </div>
@@ -666,6 +784,7 @@ async function loadSavedCodes() {
         if (project.name) {
             textContainer.innerHTML = `<span class="name">${project.name}</span>`;
         }
+        // Отображаемая дата - это всегда дата последнего изменения
         textContainer.innerHTML += formatDate(new Date(project.date));
 
         const arrow = document.createElement('span');
@@ -703,9 +822,14 @@ async function loadSavedCodes() {
         button.onmousedown = e => {
             if (e.button === 1) {
                 e.preventDefault();
+                 // Если удаляем последний открытый проект, чистим localStorage
+                if (localStorage.getItem('lastOpenedProjectId') == project.id) {
+                    localStorage.removeItem('lastOpenedProjectId');
+                }
                 deleteCode(project.id).then(() => {
                     if (currentProjectId === project.id) {
                         currentProjectId = null;
+                        initializeEditorWithFiles(initialFiles);
                     }
                     loadSavedCodes();
                     updateCurrentFileName();
@@ -728,8 +852,33 @@ async function loadSavedCodes() {
     };
 
     document.getElementById('exportAllBtn').onclick = exportAllProjectsAsZip;
+    
+    const sortBtn = document.getElementById('sortBtn');
+    sortBtn.textContent = `Sort by: ${currentSortMode === 'created' ? 'Created' : 'Changed'}`;
+    sortBtn.onclick = () => {
+        currentSortMode = (currentSortMode === 'created') ? 'changed' : 'created';
+        localStorage.setItem('projectSortMode', currentSortMode);
+        loadSavedCodes();
+    };
 
     updateFileInfo();
+
+    // <<< НАЧАЛО ИЗМЕНЕНИЙ >>>
+
+    // Сохранение позиции скролла при прокрутке
+    projectList.addEventListener('scroll', () => {
+        localStorage.setItem('projectListScrollPosition', projectList.scrollTop);
+    });
+
+    // Восстановление позиции скролла при загрузке списка
+    const savedScrollPosition = localStorage.getItem('projectListScrollPosition');
+    if (savedScrollPosition) {
+        // Используем setTimeout, чтобы гарантировать, что скролл применится после отрисовки всех элементов
+        setTimeout(() => {
+            projectList.scrollTop = parseInt(savedScrollPosition, 10);
+        }, 0);
+    }
+    // <<< КОНЕЦ ИЗМЕНЕНИЙ >>>
 }
 
 
@@ -896,15 +1045,51 @@ function importSettings() {
 exportBtn.addEventListener('click', exportSettings);
 importBtn.addEventListener('click', importSettings);
 
-openDB().then(() => {
+// Функция для загрузки проекта по умолчанию (самого нового или стартового)
+function loadFallbackProject() {
     getCodes().then(savedProjects => {
         if (savedProjects.length > 0) {
+            savedProjects.sort((a, b) => {
+                 const dateA = currentSortMode === 'created' ? (a.createdDate || a.date) : a.date;
+                 const dateB = currentSortMode === 'created' ? (b.createdDate || b.date) : b.date;
+                 return new Date(dateB) - new Date(dateA);
+            });
             loadProject(savedProjects[0].id);
         } else {
             initializeEditorWithFiles(initialFiles);
         }
         loadColors();
     });
+}
+
+// Измененная логика инициализации
+openDB().then(() => {
+    const lastOpenedIdStr = localStorage.getItem('lastOpenedProjectId');
+    
+    if (lastOpenedIdStr) {
+        const lastOpenedId = parseInt(lastOpenedIdStr, 10);
+        const tx = db.transaction([STORE_NAME], 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const request = store.get(lastOpenedId);
+        
+        request.onsuccess = e => {
+            if (e.target.result) { // Проект найден
+                loadProject(lastOpenedId);
+                loadColors();
+            } else { // Проект не найден в БД (возможно, удален)
+                localStorage.removeItem('lastOpenedProjectId');
+                loadFallbackProject();
+            }
+        };
+        request.onerror = e => { // Ошибка при доступе к БД
+            console.error("Error checking for last opened project:", e);
+            localStorage.removeItem('lastOpenedProjectId');
+            loadFallbackProject();
+        };
+    } else {
+        // ID не найден в localStorage, используем старую логику
+        loadFallbackProject();
+    }
 });
     </script>
 </body>
