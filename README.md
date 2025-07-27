@@ -39,7 +39,7 @@
 *   **Code Editor:** Syntax highlighting, bracket matching, selection highlighting, etc
 *   **Export** any single project or all your projects as a ZIP file
 *   **Other:** Change editor font size and even the editor's background opacity on the fly
-*   **Theme Customization:** It's in ESC Menu
+*   **Theme Customization:** It's in ESC Menu bottom right corner
 
 ## ✨ Updates
 
@@ -65,13 +65,12 @@ For example, create `some.js` file and paste here any function or variable from 
 console.log("yo " + x + Y);
 ```
 
-You can "import" it into your `main.js` file like this:
+You can "inject" it into your `main.js` file like this:
 ```javascript
 // some.js
 let x = 10;
 const Y = 5;
 function someFoo() { x = x * Y; }
-// a lot of functions and initializations moved here from main file
 ```
 It is very useful if you need to make code smaller without breaking it
 
@@ -80,5 +79,3 @@ The live preview will process this and execute the code as if `some.js` was writ
 ### Project & Settings Management
 
 *   **Projects:** All your code is saved in your browser's **IndexedDB**. This means your work is persistent across browser sessions on the same machine.
-
-*   **Editor Theme:** Your custom color preferences are saved in **LocalStorage**. You can export these settings via the `Export` button in the color picker menu to back them up or share them.
