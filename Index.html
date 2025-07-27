@@ -10,9 +10,7 @@
         .tab { background: #2d2d2d; color: #ccc; padding: 8px 15px; cursor: pointer; border-radius: 6px 6px 0 0; margin-right: 2px; position: relative; font-size: 14px; }
         .tab:hover { background: #4a4a4a; }
         .tab.active { background: #272822; color: #fff; border-bottom: 2px solid #f92672; }
-        .tab.dragging {
-            opacity: 0.5;
-        }
+        .tab.dragging { opacity: 0.5; }
         #add-file-btn { background: #2d2d2d; color: #ccc; padding: 8px 12px; cursor: pointer; border-radius: 6px 6px 0 0; font-weight: bold; }
         #add-file-btn:hover { background: #4a4a4a; }
         #editor { top: 40px; height: calc(100% - 40px); z-index: 10; }
@@ -86,18 +84,8 @@
         .color-item { display: flex; align-items: center; margin-bottom: 10px; width: 100%; }
         .color-item label { flex: 1; margin-right: 10px; }
         .color-item input[type="color"] { width: 50px; }
-        #colorThemeBtn {
-            padding: 5px 10px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            cursor: pointer;
-            z-index: 1001;
-            border-radius: 8px;
-        }
-        #colorThemeBtn:hover {
-            background: #45a049;
-        }
+        #colorThemeBtn { padding: 5px 10px; background: #4CAF50; color: white; border: none; cursor: pointer; z-index: 1001; border-radius: 8px; }
+        #colorThemeBtn:hover { background: #45a049; }
         #importBtn, #exportBtn { display: inline-block; margin-top: 10px; padding: 5px 10px; background: #4CAF50; color: white; border: none; cursor: pointer; border-radius: 8px; }
         #importBtn:hover, #exportBtn:hover { background: #45a049; }
         
@@ -135,122 +123,44 @@
           border-radius: 50%;
         }
         
-        input:checked + .slider {
-          background-color: #292622;
-        }
+        input:checked + .slider { background-color: #292622; }
+        input:checked + .slider:before { transform: translateX(12px); }
+
+        #menu-controls { flex: 0 0 180px; display: flex; flex-direction: column; }
+        #menu-main-actions { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        #project-list { flex: 1 1 auto; overflow-y: auto; max-height: calc(80vh - 40px); scrollbar-width: thin; scrollbar-color: #555 transparent; }
         
-        input:checked + .slider:before {
-          transform: translateX(12px);
-        }
+        #project-list::-webkit-scrollbar { width: 14px; }
+        #project-list::-webkit-scrollbar-track { background: transparent; }
+        #project-list::-webkit-scrollbar-thumb { background-color: #555; border-radius: 7px; border: 3px solid rgba(30, 30, 30, 0.95); }
+        #project-list::-webkit-scrollbar-thumb:hover { background-color: #777; }
+        #project-list::-webkit-scrollbar-button:single-button { background-color: transparent; display: block; border-style: solid; height: 10px; width: 14px; }
+        #project-list::-webkit-scrollbar-button:single-button:hover { background-color: rgba(255, 255, 255, 0.1); }
+        #project-list::-webkit-scrollbar-button:single-button:vertical:decrement { border-width: 0 5px 5px 5px; border-color: transparent transparent #999 transparent; }
+        #project-list::-webkit-scrollbar-button:single-button:vertical:increment { border-width: 5px 5px 0 5px; border-color: #999 transparent transparent transparent; }
 
-        #menu-controls {
-            flex: 0 0 180px;
-            display: flex;
-            flex-direction: column;
-        }
-        #menu-main-actions {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-        #project-list {
-            flex: 1 1 auto;
-            overflow-y: auto;
-            max-height: calc(80vh - 40px);
-            scrollbar-width: thin;
-            scrollbar-color: #555 transparent;
-        }
-        
-        #project-list::-webkit-scrollbar {
-            width: 14px;
-        }
-
-        #project-list::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        #project-list::-webkit-scrollbar-thumb {
-            background-color: #555;
-            border-radius: 7px;
-            border: 3px solid rgba(30, 30, 30, 0.95); 
-        }
-        
-        #project-list::-webkit-scrollbar-thumb:hover {
-            background-color: #777;
-        }
-
-        #project-list::-webkit-scrollbar-button:single-button {
-            background-color: transparent;
-            display: block;
-            border-style: solid;
-            height: 10px;
-            width: 14px;
-        }
-        #project-list::-webkit-scrollbar-button:single-button:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-        #project-list::-webkit-scrollbar-button:single-button:vertical:decrement {
-            border-width: 0 5px 5px 5px;
-            border-color: transparent transparent #999 transparent;
-        }
-        #project-list::-webkit-scrollbar-button:single-button:vertical:increment {
-            border-width: 5px 5px 0 5px;
-            border-color: #999 transparent transparent transparent;
-        }
-
-        #project-list button {
-            min-width: 180px;
-        }
-        #menu-controls #fileInfo {
-            padding-top: 10px;
-            border-top: 1px solid #444;
-            margin-bottom: 0;
-        }
-        .export-arrow {
-            display: inline-flex;
-            visibility: hidden;
-            align-items: center;
-            justify-content: center;
-            width: 20px;
-            height: 20px;
-            background-color: #2a2a2a;
-            border: 1px solid #444;
-            border-radius: 6px;
-            color: #ccc;
-            font-size: 12px;
-            line-height: 1;
-            cursor: pointer;
-            margin-left: 10px;
-            transition: background-color 0.2s, color 0.2s, filter 0.3s;
-        }
-        #project-list.show-export-arrows .export-arrow {
-            visibility: visible;
-        }
-
-        .export-arrow:hover {
-            background-color: #555;
-            color: #fff;
-        }
-        .export-arrow.exported {
-            filter: brightness(0.5);
-        }
-        #notification {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #4CAF50;
-            color: white;
-            padding: 15px;
-            border-radius: 6px;
-            z-index: 2000;
-            opacity: 0;
-            transition: opacity 0.5s ease-in-out;
-            pointer-events: none;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.5);
-        }
+        #project-list button { min-width: 180px; }
+        #menu-controls #fileInfo { padding-top: 10px; border-top: 1px solid #444; margin-bottom: 0; }
+        .export-arrow { display: inline-flex; visibility: hidden; align-items: center; justify-content: center; width: 20px; height: 20px; background-color: #2a2a2a; border: 1px solid #444; border-radius: 6px; color: #ccc; font-size: 12px; line-height: 1; cursor: pointer; margin-left: 10px; transition: background-color 0.2s, color 0.2s, filter 0.3s; }
+        #project-list.show-export-arrows .export-arrow { visibility: visible; }
+        .export-arrow:hover { background-color: #555; color: #fff; }
+        .export-arrow.exported { filter: brightness(0.5); }
+        #notification { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background-color: #4CAF50; color: white; padding: 15px; border-radius: 6px; z-index: 2000; opacity: 0; transition: opacity 0.5s ease-in-out; pointer-events: none; box-shadow: 0 3px 10px rgba(0,0,0,0.5); }
     </style>
+    <script src="https://unpkg.com/pako@2.0.4/dist/pako.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/codemirror.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/theme/monokai.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/mode/htmlmixed/htmlmixed.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/addon/search/match-highlighter.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/addon/scroll/annotatescrollbar.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/addon/search/matchesonscrollbar.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/addon/mode/simple.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
     <label class="live-update-switch">
@@ -266,19 +176,6 @@
     <div id="colorPicker">
         <div class="color-item"><label for="Comment">Comment</label><input type="color" id="Comment"></div><div class="color-item"><label for="Keyword">Keyword</label><input type="color" id="Keyword"></div><div class="color-item"><label for="String">String</label><input type="color" id="String"></div><div class="color-item"><label for="Number">Number</label><input type="color" id="Number"></div><div class="color-item"><label for="Special">Special</label><input type="color" id="Special"></div><div class="color-item"><label for="Variable">Variable</label><input type="color" id="Variable"></div><div class="color-item"><label for="Property">Property</label><input type="color" id="Property"></div><div class="color-item"><label for="Definition">Definition</label><input type="color" id="Definition"></div><div class="color-item"><label for="Function">Function</label><input type="color" id="Function"></div><div class="color-item"><label for="Operator">Operator</label><input type="color" id="Operator"></div><div class="color-item"><label for="HTMLBracket">HTML Bracket</label><input type="color" id="HTMLBracket"></div><div class="color-item"><label for="HighlightedBracket">Highlighted Bracket</label><input type="color" id="HighlightedBracket"></div><div class="color-item"><label for="Class">Class</label><input type="color" id="Class"></div><div class="color-item"><label for="Regex">Regex</label><input type="color" id="Regex"></div><div class="color-item"><label for="HTMLTag">HTML Tag</label><input type="color" id="HTMLTag"></div><div class="color-item"><label for="HTMLAttribute">HTML Attribute</label><input type="color" id="HTMLAttribute"></div><div class="color-item"><label for="OtherText">Other Text</label><input type="color" id="OtherText"></div><button id="importBtn">Import</button><button id="exportBtn">Export</button>
     </div>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/codemirror.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/codemirror.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/theme/monokai.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/mode/htmlmixed/htmlmixed.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/mode/javascript/javascript.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/mode/css/css.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/mode/xml/xml.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/addon/edit/matchbrackets.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/addon/search/match-highlighter.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/addon/scroll/annotatescrollbar.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/addon/search/matchesonscrollbar.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/addon/mode/simple.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script>
 const editor = CodeMirror(document.getElementById("editor"), {
     lineNumbers: true,
@@ -357,7 +254,6 @@ function showNotification(message) {
     setTimeout(() => { el.style.opacity = '0'; }, 2000);
 }
 
-// Улучшенное кодирование с увеличенным алфавитом (92 символа)
 const URL_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%&()*+-;=@[]^_{}~";
 const BASE = BigInt(URL_ALPHABET.length);
 const ALPHABET_MAP = new Map(URL_ALPHABET.split('').map((c, i) => [c, BigInt(i)]));
@@ -401,14 +297,6 @@ function decodeBaseCustom(str) {
     return new Uint8Array([...Array(leadingZeros).fill(0), ...bytes.reverse()]);
 }
 
-// --- OPTIMIZATION START ---
-// Новые, более эффективные функции для сериализации и десериализации, использующие Varints
-
-/**
- * Кодирует число в Varint.
- * @param {number} value - Неотрицательное целое число.
- * @returns {Uint8Array} - Массив байтов Varint.
- */
 function encodeVarint(value) {
     const bytes = [];
     while (value >= 0x80) {
@@ -419,12 +307,6 @@ function encodeVarint(value) {
     return new Uint8Array(bytes);
 }
 
-/**
- * Декодирует Varint из массива байтов.
- * @param {Uint8Array} bytes - Массив байтов, содержащий Varint.
- * @param {number} offset - Начальное смещение в массиве.
- * @returns {{value: number, newOffset: number}} - Раскодированное число и новое смещение.
- */
 function decodeVarint(bytes, offset) {
     let value = 0;
     let shift = 0;
@@ -442,9 +324,6 @@ function decodeVarint(bytes, offset) {
     }
 }
 
-/**
- * Оптимизированная функция сериализации проекта в бинарный формат с использованием Varint.
- */
 function serializeProjectOptimized(projectFileOrder, projectFiles) {
     const textEncoder = new TextEncoder();
     const parts = [];
@@ -461,7 +340,6 @@ function serializeProjectOptimized(projectFileOrder, projectFiles) {
         parts.push(codeBytes);
     });
 
-    // Объединяем все части в один Uint8Array для эффективности
     const totalLength = parts.reduce((acc, part) => acc + part.length, 0);
     const result = new Uint8Array(totalLength);
     let offset = 0;
@@ -473,9 +351,6 @@ function serializeProjectOptimized(projectFileOrder, projectFiles) {
     return result;
 }
 
-/**
- * Оптимизированная функция десериализации проекта из бинарного формата с использованием Varint.
- */
 function deserializeProjectOptimized(bytes) {
     const textDecoder = new TextDecoder();
     const filesToLoad = {};
@@ -483,21 +358,17 @@ function deserializeProjectOptimized(bytes) {
     let offset = 0;
 
     while (offset < bytes.length) {
-        // Декодируем длину имени файла
         const nameLenResult = decodeVarint(bytes, offset);
         const nameLen = nameLenResult.value;
         offset = nameLenResult.newOffset;
         
-        // Декодируем имя файла
         const name = textDecoder.decode(bytes.subarray(offset, offset + nameLen));
         offset += nameLen;
 
-        // Декодируем длину кода
         const codeLenResult = decodeVarint(bytes, offset);
         const codeLen = codeLenResult.value;
         offset = codeLenResult.newOffset;
 
-        // Декодируем код
         const code = textDecoder.decode(bytes.subarray(offset, offset + codeLen));
         offset += codeLen;
 
@@ -508,24 +379,18 @@ function deserializeProjectOptimized(bytes) {
     return { filesToLoad, fileOrderToLoad };
 }
 
-// --- OPTIMIZATION END ---
-
-
 async function generateShareableUrl() {
     try {
         if (activeFileName) {
             files[activeFileName].code = editor.getValue();
         }
         
-        // ИСПОЛЬЗУЕМ НОВУЮ, ОПТИМИЗИРОВАННУЮ ФУНКЦИЮ СЕРИАЛИЗАЦИИ
         const binaryData = serializeProjectOptimized(fileOrder, files);
         
-        const stream = new Blob([binaryData])
-            .stream().pipeThrough(new CompressionStream('gzip'));
-        const buffer = await new Response(stream).arrayBuffer();
+        const compressed = pako.gzip(binaryData, { level: 9 });
         
-        const encodedData = encodeBaseCustom(new Uint8Array(buffer));
-
+        const encodedData = encodeBaseCustom(compressed);
+        
         const url = `${location.origin}${location.pathname}#p=${encodedData}`;
         await navigator.clipboard.writeText(url);
         showNotification('Link copied (optimized & compressed)');
@@ -542,10 +407,9 @@ async function loadFromUrlHash() {
         
         const compressedBytes = decodeBaseCustom(encodedData);
         
-        const stream = new Blob([compressedBytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-        const binaryData = new Uint8Array(await new Response(stream).arrayBuffer());
+        const decompressed = pako.ungzip(compressedBytes);
+        const binaryData = new Uint8Array(decompressed);
         
-        // ИСПОЛЬЗУЕМ НОВУЮ, ОПТИМИЗИРОВАННУЮ ФУНКЦИЮ ДЕСЕРИАЛИЗАЦИИ
         const { filesToLoad, fileOrderToLoad } = deserializeProjectOptimized(binaryData);
 
         if (fileOrderToLoad.length > 0) {
@@ -1144,7 +1008,6 @@ async function loadSavedCodes() {
     }
 }
 
-
 async function exportProjectAsZip(projectId) {
     try {
         const tx = db.transaction([STORE_NAME], 'readonly');
@@ -1226,7 +1089,6 @@ async function exportAllProjectsAsZip() {
         alert("An error occurred while exporting all projects.");
     }
 }
-
 
 function formatDate(date) { const diff = (new Date() - date) / 1000; if(diff < 60) return `${Math.round(diff)}s`; if(diff < 3600) return `${Math.round(diff/60)}m`; if(diff < 86400) return `${Math.round(diff/3600)}h`; return `${Math.round(diff/86400)}d`; }
 
