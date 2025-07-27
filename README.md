@@ -1,6 +1,29 @@
-# CodiuM
+# [CodiuM](https://enoxyum.github.io/CodiuM/Index.html)
 
-https://enoxyum.github.io/CodiuM/Index.html
+## ⌨️ Keyboard & Mouse Shortcuts
+
+### Editor
+| Shortcut | Action |
+| :--- | :--- |
+| `Alt` | Switch between code editing and preview |
+| `Esc` | Toggle Project menu |
+| `Alt` + `Shift` | Toggle console |
+| `Ctrl` + `S` | Save current project |
+| `Ctrl` + `Mouse Wheel` | Increase/decrease the editor's font size |
+| `Shift` + `Mouse Wheel` | Increase/decrease the editor's background opacity |
+
+### File Tabs
+| Action | Description |
+| :--- | :--- |
+| **Middle Click** | Close file tab |
+| **Right Click** | Rename file |
+
+### Project Menu (ESC)
+| Action | Description |
+| :--- | :--- |
+| **Left Click** | Load project |
+| **Middle Click** | Delete project |
+| **Right Click** | Rename project |
 
 ## ✨ Features
 
@@ -20,37 +43,6 @@ https://enoxyum.github.io/CodiuM/Index.html
 *   **Project sorting** by creation date and change date
 *   **Tabs rearrangement** by drag and drop like a browser tabs
 *   **Current project scroll saving.** Now you don't have to scroll back again😀
-
-
-## ⌨️ Keyboard & Mouse Shortcuts
-
-### General
-| Shortcut | Action |
-| :--- | :--- |
-| `Alt` | Switch between code editing and preview |
-| `Esc` | Toggle Project menu |
-| `Alt` + `Shift` | Toggle console |
-| `Ctrl` + `S` | Save current project |
-
-### Editor
-| Shortcut | Action |
-| :--- | :--- |
-| `Ctrl` + `Mouse Wheel` | Increase/decrease the editor's font size |
-| `Shift` + `Mouse Wheel` | Increase/decrease the editor's background opacity |
-
-### File Tabs
-| Action | Description |
-| :--- | :--- |
-| **Middle Click** | Close file tab |
-| **Right Click** | Rename file |
-
-### Project Menu (ESC)
-| Action | Description |
-| :--- | :--- |
-| **Left Click** | Load project |
-| **Middle Click** | Delete project |
-| **Right Click** | Rename project |
-
 
 ##  Advanced Features
 
