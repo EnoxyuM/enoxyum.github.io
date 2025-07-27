@@ -1,4 +1,8 @@
-# [CodiuM](https://enoxyum.github.io/CodiuM/Index.html)
+<div align="center">
+  <h1>
+    <a href="https://enoxyum.github.io/CodiuM/Index.html">CodiuM</a>
+  </h1>
+</div>
 
 ## ⌨️ Keyboard & Mouse Shortcuts
 
