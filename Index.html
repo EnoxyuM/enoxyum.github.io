@@ -235,6 +235,22 @@
         .export-arrow.exported {
             filter: brightness(0.5);
         }
+        /* Style for notification pop-up */
+        #notification {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px;
+            border-radius: 6px;
+            z-index: 2000;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            pointer-events: none;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+        }
     </style>
 </head>
 <body>
@@ -330,6 +346,61 @@ document.body.style.backgroundColor = '#2d2d2d';
     padding-top: 50px;
 }`
 };
+
+function showNotification(message) {
+    let el = document.getElementById('notification');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'notification';
+        document.body.appendChild(el);
+    }
+    el.textContent = message;
+    el.style.opacity = '1';
+    setTimeout(() => { el.style.opacity = '0'; }, 2000);
+}
+
+async function generateShareableUrl() {
+    try {
+        if (activeFileName) files[activeFileName].code = editor.getValue();
+        const filesToShare = {};
+        for (const name in files) filesToShare[name] = files[name].code;
+        const data = { files: filesToShare, fileOrder };
+        
+        const stream = new Blob([JSON.stringify(data)]).stream().pipeThrough(new CompressionStream('gzip'));
+        const buffer = await new Response(stream).arrayBuffer();
+        
+        const b64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+        const urlSafeB64 = b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+        const url = `${location.origin}${location.pathname}#p=${urlSafeB64}`;
+        await navigator.clipboard.writeText(url);
+        showNotification('link copied');
+    } catch (e) {
+        console.error("Share error:", e);
+        showNotification('Error creating link');
+    }
+}
+
+async function loadFromUrlHash() {
+    if (!location.hash.startsWith('#p=')) return false;
+    try {
+        let b64 = location.hash.substring(3).replace(/-/g, '+').replace(/_/g, '/');
+        while (b64.length % 4) b64 += '=';
+        const str = atob(b64);
+        const bytes = Uint8Array.from(str, c => c.charCodeAt(0));
+        const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+        const data = JSON.parse(await new Response(stream).text());
+        if (data.files) {
+            initializeEditorWithFiles(data.files, data.fileOrder);
+            currentProjectId = null;
+            updateCurrentFileName();
+            history.replaceState(null, '', location.pathname + location.search);
+            showNotification('Project loaded from URL');
+            return true;
+        }
+    } catch(e) { console.error("URL load error:", e); showNotification('Invalid or corrupted link'); }
+    return false;
+}
 
 function getModeForFilename(filename) {
     if (filename.endsWith('.js')) return 'javascript';
@@ -799,6 +870,7 @@ async function loadSavedCodes() {
                 <button id="saveBtn">Save New Project</button>
                 <button id="exportToggleBtn">Export Projects</button>
                 <button id="exportAllBtn">Export All</button>
+                <button id="shareUrlBtn">Share as URL</button>
                 <button id="sortBtn"></button>
                 <button id="colorThemeBtn">Color Theme</button>
             </div>
@@ -882,6 +954,7 @@ async function loadSavedCodes() {
     };
 
     document.getElementById('exportAllBtn').onclick = exportAllProjectsAsZip;
+    document.getElementById('shareUrlBtn').onclick = generateShareableUrl;
     
     const sortBtn = document.getElementById('sortBtn');
     sortBtn.textContent = `Sort by: ${currentSortMode === 'created' ? 'Created' : 'Changed'}`;
@@ -1089,7 +1162,12 @@ function loadFallbackProject() {
     });
 }
 
-openDB().then(() => {
+openDB().then(async () => {
+    if (await loadFromUrlHash()) {
+        loadColors();
+        return;
+    }
+
     const lastOpenedIdStr = localStorage.getItem('lastOpenedProjectId');
     
     if (lastOpenedIdStr) {
