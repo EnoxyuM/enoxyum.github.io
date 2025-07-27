@@ -7,14 +7,13 @@
     <style>
         body, html { margin: 0; padding: 0; height: 100vh; overflow: hidden; font-family: sans-serif; background: #1e1e1e; color: #e0e0e0; }
         #file-tabs { position: absolute; top: 0; left: 0; width: 100%; background: #3c3c3c; z-index: 11; display: flex; flex-wrap: wrap; padding: 5px 5px 0 50px; box-sizing: border-box; height: 40px; }
-        .tab { background: #2d2d2d; color: #ccc; padding: 8px 15px; cursor: pointer; border-top-left-radius: 4px; border-top-right-radius: 4px; margin-right: 2px; position: relative; font-size: 14px; }
+        .tab { background: #2d2d2d; color: #ccc; padding: 8px 15px; cursor: pointer; border-radius: 6px 6px 0 0; margin-right: 2px; position: relative; font-size: 14px; }
         .tab:hover { background: #4a4a4a; }
         .tab.active { background: #272822; color: #fff; border-bottom: 2px solid #f92672; }
-        /* СТИЛЬ ДЛЯ ПЕРЕТАСКИВАЕМОЙ ВКЛАДКИ */
         .tab.dragging {
             opacity: 0.5;
         }
-        #add-file-btn { background: #2d2d2d; color: #ccc; padding: 8px 12px; cursor: pointer; border-top-left-radius: 4px; border-top-right-radius: 4px; font-weight: bold; }
+        #add-file-btn { background: #2d2d2d; color: #ccc; padding: 8px 12px; cursor: pointer; border-radius: 6px 6px 0 0; font-weight: bold; }
         #add-file-btn:hover { background: #4a4a4a; }
         #editor { top: 40px; height: calc(100% - 40px); z-index: 10; }
         #editor, #scene, #console { width: 100%; border: none; position: absolute; left: 0; }
@@ -72,22 +71,24 @@
             flex-direction: row;
             gap: 20px;
             box-sizing: border-box;
+            border-radius: 12px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
         }
-        #menu button { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px; margin: 5px 0; background: #333; color: #fff; border: none; cursor: pointer; text-align: left; box-sizing: border-box; }
+        #menu button { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px; margin: 5px 0; background: #333; color: #fff; border: none; cursor: pointer; text-align: left; box-sizing: border-box; border-radius: 8px; }
         #menu button:hover { background: #444; }
         #menu button.selected { background: #555; }
         #menu button .name { color: #ff9800; font-weight: bold; display: block; }
         #saveBtn { background: #4CAF50 !important; }
         #saveBtn:hover { background: #45a049 !important; }
-        #currentFileName { position: fixed; top: 10px; right: 10px; background: rgba(0, 0, 0, 0.5); padding: 5px 10px; border-radius: 5px; z-index: 1000; }
+        #currentFileName { position: fixed; top: 10px; right: 10px; background: rgba(0, 0, 0, 0.5); padding: 5px 10px; border-radius: 8px; z-index: 1000; }
         #fileInfo { margin-bottom: 10px; }
-        #colorPicker { position: fixed; top: 50%; right: 20px; transform: translateY(-50%); background: rgba(30, 30, 30, 0.9); border: 1px solid #444; padding: 20px; display: none; flex-direction: column; align-items: center; z-index: 1000; max-height: 80vh; overflow-y: auto; }
+        #colorPicker { position: fixed; top: 50%; right: 20px; transform: translateY(-50%); background: rgba(30, 30, 30, 0.9); border: 1px solid #444; padding: 20px; display: none; flex-direction: column; align-items: center; z-index: 1000; max-height: 80vh; overflow-y: auto; border-radius: 12px; box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3); }
         .color-item { display: flex; align-items: center; margin-bottom: 10px; width: 100%; }
         .color-item label { flex: 1; margin-right: 10px; }
         .color-item input[type="color"] { width: 50px; }
-        #colorBtn { display: none; position: fixed; bottom: 10px; right: 10px; padding: 5px 10px; background: #4CAF50; color: white; border: none; cursor: pointer; z-index: 1001; }
+        #colorBtn { display: none; position: fixed; bottom: 10px; right: 10px; padding: 5px 10px; background: #4CAF50; color: white; border: none; cursor: pointer; z-index: 1001; border-radius: 8px; }
         #colorBtn:hover { background: #45a049; }
-        #importBtn, #exportBtn { display: inline-block; margin-top: 10px; padding: 5px 10px; background: #4CAF50; color: white; border: none; cursor: pointer; }
+        #importBtn, #exportBtn { display: inline-block; margin-top: 10px; padding: 5px 10px; background: #4CAF50; color: white; border: none; cursor: pointer; border-radius: 8px; }
         #importBtn:hover, #exportBtn:hover { background: #45a049; }
         
         .live-update-switch {
@@ -147,6 +148,45 @@
             flex: 1 1 auto;
             overflow-y: auto;
             max-height: calc(80vh - 40px);
+            scrollbar-width: thin;
+            scrollbar-color: #555 transparent;
+        }
+        
+        #project-list::-webkit-scrollbar {
+            width: 14px;
+        }
+
+        #project-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #project-list::-webkit-scrollbar-thumb {
+            background-color: #555;
+            border-radius: 7px;
+            border: 3px solid rgba(30, 30, 30, 0.95); /* Отступ, чтобы фон меню просвечивал */
+        }
+        
+        #project-list::-webkit-scrollbar-thumb:hover {
+            background-color: #777;
+        }
+
+        #project-list::-webkit-scrollbar-button:single-button {
+            background-color: transparent;
+            display: block;
+            border-style: solid;
+            height: 10px;
+            width: 14px;
+        }
+        #project-list::-webkit-scrollbar-button:single-button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        #project-list::-webkit-scrollbar-button:single-button:vertical:decrement {
+            border-width: 0 5px 5px 5px;
+            border-color: transparent transparent #999 transparent;
+        }
+        #project-list::-webkit-scrollbar-button:single-button:vertical:increment {
+            border-width: 5px 5px 0 5px;
+            border-color: #999 transparent transparent transparent;
         }
 
         #project-list button {
@@ -248,7 +288,7 @@ const exportBtn = document.getElementById('exportBtn');
 const fileTabsContainer = document.getElementById('file-tabs');
 
 let files = {};
-let fileOrder = []; // << НОВЫЙ МАССИВ ДЛЯ ХРАНЕНИЯ ПОРЯДКА ФАЙЛОВ
+let fileOrder = [];
 let activeFileName = null;
 let currentProjectId = null;
 let currentSortMode = localStorage.getItem('projectSortMode') || 'created';
@@ -302,7 +342,6 @@ function initializeEditorWithFiles(fileSet, loadedFileOrder) {
     }
     
     if (loadedFileOrder && Array.isArray(loadedFileOrder) && loadedFileOrder.length > 0) {
-        // Используем загруженный порядок, но "чистим" его
         const cleanOrder = loadedFileOrder.filter(f => files[f]);
         const orderedFiles = new Set(cleanOrder);
         for (const filename in files) {
@@ -312,7 +351,6 @@ function initializeEditorWithFiles(fileSet, loadedFileOrder) {
         }
         fileOrder = cleanOrder;
     } else {
-        // Создаем порядок по умолчанию, если он не был предоставлен
         fileOrder = Object.keys(files).sort((a, b) => {
             if (a === 'index.html') return -1;
             if (b === 'index.html') return 1;
@@ -335,16 +373,14 @@ function initializeEditorWithFiles(fileSet, loadedFileOrder) {
 function renderTabs() {
     fileTabsContainer.innerHTML = '';
     
-    // Используем массив fileOrder для отрисовки вкладок в правильном порядке
     fileOrder.forEach(filename => {
-        if (!files[filename]) return; // Проверка на случай рассогласования
+        if (!files[filename]) return;
         
         const tab = document.createElement('div');
         tab.className = 'tab';
         tab.textContent = filename;
-        tab.dataset.filename = filename; // Для легкой идентификации
+        tab.dataset.filename = filename;
 
-        // Делаем вкладку перетаскиваемой, кроме index.html
         if (filename !== 'index.html') {
             tab.draggable = true;
         }
@@ -356,19 +392,18 @@ function renderTabs() {
         tab.onclick = () => switchTab(filename);
 
         tab.addEventListener('mousedown', (e) => {
-            if (e.button === 1) { // Закрытие по средней кнопке мыши
+            if (e.button === 1) {
                 e.preventDefault();
                 closeFile(filename);
             }
         });
 
-        tab.addEventListener('contextmenu', (e) => { // Переименование по правому клику
+        tab.addEventListener('contextmenu', (e) => {
             e.preventDefault();
             const newName = prompt(`Переименовать файл "${filename}":`, filename);
             renameFile(filename, newName);
         });
         
-        // Обработчики событий для перетаскивания
         tab.addEventListener('dragstart', () => {
             setTimeout(() => tab.classList.add('dragging'), 0);
         });
@@ -388,7 +423,6 @@ function renderTabs() {
     fileTabsContainer.appendChild(addBtn);
 }
 
-// Вспомогательная функция для определения, перед каким элементом вставлять перетаскиваемый
 function getDragAfterElement(container, x) {
     const draggableElements = [...container.querySelectorAll('.tab[draggable="true"]:not(.dragging)')];
 
@@ -403,7 +437,6 @@ function getDragAfterElement(container, x) {
     }, { offset: Number.NEGATIVE_INFINITY }).element;
 }
 
-// Глобальные обработчики для контейнера вкладок
 fileTabsContainer.addEventListener('dragover', e => {
     e.preventDefault();
     const afterElement = getDragAfterElement(fileTabsContainer, e.clientX);
@@ -420,7 +453,6 @@ fileTabsContainer.addEventListener('dragover', e => {
 
 fileTabsContainer.addEventListener('drop', e => {
     e.preventDefault();
-    // DOM уже обновлен, теперь обновляем наш массив с порядком
     const newOrderedTabs = fileTabsContainer.querySelectorAll('.tab');
     fileOrder = Array.from(newOrderedTabs).map(tab => tab.dataset.filename);
 });
@@ -434,7 +466,7 @@ function switchTab(filename) {
 
     activeFileName = filename;
     editor.swapDoc(files[filename].doc);
-    editor.setOption('mode', getModeForFilename(activeFileName));
+    editor.setOption('mode', getModeForFilename(filename));
     renderTabs();
     editor.focus();
 }
@@ -446,7 +478,7 @@ function createNewFile() {
             code: '',
             doc: CodeMirror.Doc('', getModeForFilename(filename))
         };
-        fileOrder.push(filename); // Добавляем новый файл в конец списка
+        fileOrder.push(filename);
         switchTab(filename);
     } else if (files[filename]) {
         alert("Файл с таким именем уже существует.");
@@ -460,7 +492,6 @@ function closeFile(filename) {
     }
     delete files[filename];
     
-    // Удаляем файл из массива порядка
     const index = fileOrder.indexOf(filename);
     if (index > -1) {
         fileOrder.splice(index, 1);
@@ -494,7 +525,6 @@ function renameFile(oldName, newName) {
     };
     delete files[oldName];
 
-    // Обновляем имя файла в массиве порядка
     const index = fileOrder.indexOf(oldName);
     if (index > -1) {
         fileOrder[index] = newName;
@@ -707,24 +737,22 @@ async function saveCurrentCode(overwrite = false) {
         getReq.onsuccess = (e) => {
             const project = e.target.result;
             if (project) {
-                // Если у старого проекта нет даты создания, устанавливаем ее
                 if (!project.createdDate) {
                     project.createdDate = new Date(project.date);
                 }
                 project.files = filesToSave;
-                project.fileOrder = fileOrder; // Сохраняем порядок
-                project.date = now; // Обновляем дату последнего изменения
+                project.fileOrder = fileOrder;
+                project.date = now;
                 updateCode(project).then(loadSavedCodes);
                 localStorage.setItem('lastOpenedProjectId', currentProjectId);
             }
         };
     } else {
-        // Создаем новый проект, устанавливая обе даты
         const newProject = { 
             date: now, 
             createdDate: now, 
             files: filesToSave, 
-            fileOrder: fileOrder, // Сохраняем порядок
+            fileOrder: fileOrder,
             name: '' 
         };
         const id = await saveCode(newProject);
@@ -743,8 +771,8 @@ async function loadProject(projectId) {
         const project = e.target.result;
         if (project && project.files) {
             currentProjectId = project.id;
-            localStorage.setItem('lastOpenedProjectId', project.id); // Запоминаем ID
-            initializeEditorWithFiles(project.files, project.fileOrder); // Передаем порядок файлов
+            localStorage.setItem('lastOpenedProjectId', project.id);
+            initializeEditorWithFiles(project.files, project.fileOrder);
             await loadSavedCodes();
             updateCurrentFileName();
         }
@@ -754,9 +782,7 @@ async function loadProject(projectId) {
 async function loadSavedCodes() {
     const savedProjects = await getCodes();
 
-    // Сортировка проектов в зависимости от выбранного режима
     savedProjects.sort((a, b) => {
-        // Для старых проектов используем `date` если `createdDate` отсутствует
         const dateA = currentSortMode === 'created' ? (a.createdDate || a.date) : a.date;
         const dateB = currentSortMode === 'created' ? (b.createdDate || b.date) : b.date;
         return new Date(dateB) - new Date(dateA);
@@ -784,7 +810,6 @@ async function loadSavedCodes() {
         if (project.name) {
             textContainer.innerHTML = `<span class="name">${project.name}</span>`;
         }
-        // Отображаемая дата - это всегда дата последнего изменения
         textContainer.innerHTML += formatDate(new Date(project.date));
 
         const arrow = document.createElement('span');
@@ -822,7 +847,6 @@ async function loadSavedCodes() {
         button.onmousedown = e => {
             if (e.button === 1) {
                 e.preventDefault();
-                 // Если удаляем последний открытый проект, чистим localStorage
                 if (localStorage.getItem('lastOpenedProjectId') == project.id) {
                     localStorage.removeItem('lastOpenedProjectId');
                 }
@@ -863,22 +887,16 @@ async function loadSavedCodes() {
 
     updateFileInfo();
 
-    // <<< НАЧАЛО ИЗМЕНЕНИЙ >>>
-
-    // Сохранение позиции скролла при прокрутке
     projectList.addEventListener('scroll', () => {
         localStorage.setItem('projectListScrollPosition', projectList.scrollTop);
     });
 
-    // Восстановление позиции скролла при загрузке списка
     const savedScrollPosition = localStorage.getItem('projectListScrollPosition');
     if (savedScrollPosition) {
-        // Используем setTimeout, чтобы гарантировать, что скролл применится после отрисовки всех элементов
         setTimeout(() => {
             projectList.scrollTop = parseInt(savedScrollPosition, 10);
         }, 0);
     }
-    // <<< КОНЕЦ ИЗМЕНЕНИЙ >>>
 }
 
 
@@ -1045,7 +1063,6 @@ function importSettings() {
 exportBtn.addEventListener('click', exportSettings);
 importBtn.addEventListener('click', importSettings);
 
-// Функция для загрузки проекта по умолчанию (самого нового или стартового)
 function loadFallbackProject() {
     getCodes().then(savedProjects => {
         if (savedProjects.length > 0) {
@@ -1062,7 +1079,6 @@ function loadFallbackProject() {
     });
 }
 
-// Измененная логика инициализации
 openDB().then(() => {
     const lastOpenedIdStr = localStorage.getItem('lastOpenedProjectId');
     
@@ -1073,21 +1089,20 @@ openDB().then(() => {
         const request = store.get(lastOpenedId);
         
         request.onsuccess = e => {
-            if (e.target.result) { // Проект найден
+            if (e.target.result) {
                 loadProject(lastOpenedId);
                 loadColors();
-            } else { // Проект не найден в БД (возможно, удален)
+            } else {
                 localStorage.removeItem('lastOpenedProjectId');
                 loadFallbackProject();
             }
         };
-        request.onerror = e => { // Ошибка при доступе к БД
+        request.onerror = e => {
             console.error("Error checking for last opened project:", e);
             localStorage.removeItem('lastOpenedProjectId');
             loadFallbackProject();
         };
     } else {
-        // ID не найден в localStorage, используем старую логику
         loadFallbackProject();
     }
 });
