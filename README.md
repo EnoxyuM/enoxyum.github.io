@@ -41,7 +41,7 @@
 *   **Other:** Change editor font size and even the editor's background opacity on the fly
 *   **Theme Customization:** It's in ESC Menu bottom right corner
 
-## ✨ Updates
+## 🧪 Updates
 
 27.07.2025
 *   **Share as URL:** Share whole your project as URL link 🤯
