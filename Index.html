@@ -254,7 +254,8 @@ function showNotification(message) {
     setTimeout(() => { el.style.opacity = '0'; }, 2000);
 }
 
-const URL_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%&()*+-;=@[]^_{}~";
+// ИЗМЕНЕНИЕ: Алфавит расширен до 87 символов, добавлены ,.:?/
+const URL_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%&()*+-;=@[]^_{}~,.:?/";
 const BASE = BigInt(URL_ALPHABET.length);
 const ALPHABET_MAP = new Map(URL_ALPHABET.split('').map((c, i) => [c, BigInt(i)]));
 
