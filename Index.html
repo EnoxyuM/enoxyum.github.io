@@ -357,7 +357,8 @@ function showNotification(message) {
     setTimeout(() => { el.style.opacity = '0'; }, 2000);
 }
 
-const URL_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-.!~*'();:@$,";
+// Улучшенное кодирование с увеличенным алфавитом (92 символа)
+const URL_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%&()*+-;=@[]^_{}~";
 const BASE = BigInt(URL_ALPHABET.length);
 const ALPHABET_MAP = new Map(URL_ALPHABET.split('').map((c, i) => [c, BigInt(i)]));
 
@@ -401,7 +402,7 @@ function decodeBaseCustom(str) {
 }
 
 // --- OPTIMIZATION START ---
-// Новые, более эффективные функции для сериализации и десериализации
+// Новые, более эффективные функции для сериализации и десериализации, использующие Varints
 
 /**
  * Кодирует число в Varint.
