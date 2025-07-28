@@ -8,8 +8,6 @@
     <style>
         body, html { margin: 0; padding: 0; height: 100vh; overflow: hidden; font-family: sans-serif; background: #1e1e1e; color: #e0e0e0; }
         
-        /* --- СТИЛИ ИЗ КОДА 1, АДАПТИРОВАННЫЕ ДЛЯ КОДА 2 --- */
-
         #file-tabs {
             display: flex;
             align-items: stretch; 
@@ -29,7 +27,7 @@
             align-items: flex-end;
             min-width: 0; 
             overflow: hidden;
-            flex: 0 0 auto; /* Начальное состояние: не растягиваться */
+            flex: 0 0 auto; 
         }
 
         .tab {
@@ -39,11 +37,11 @@
             background: #2d2d2d;
             color: #ccc;
             cursor: pointer;
-            border-radius: 6px; /* В неактивном состоянии скругление полное */
+            border-radius: 6px; 
             margin-right: 2px;
             min-width: 1px;
             overflow: hidden;
-            flex-shrink: 0; /* Начальное состояние: не сжиматься */
+            flex-shrink: 0; 
             width: 232px;
             height: 35px;
             box-sizing: border-box;
@@ -61,11 +59,11 @@
         }
 
         .tab.active {
-            background: #1e1e1e; /* Цвет как у body, как в коде 1 */
+            background: #1e1e1e; 
             color: #fff;
-            border-radius: 6px 6px 0 0; /* Срезанные нижние углы для активной вкладки */
+            border-radius: 6px 6px 0 0; 
             height: 35px;
-            border-bottom: none; /* Убираем бордер из кода 2, чтобы соответствовать коду 1 */
+            border-bottom: none; 
         }
 
         .tab:not(.active):hover, #add-file-btn:hover {
@@ -101,10 +99,8 @@
             padding: 0 15px;
             white-space: nowrap;
             flex-shrink: 0;
-            /* display: none; будет управляться JS */
         }
         
-        /* Логика сжатия, как в коде 1 */
         #file-tabs.tabs-overflow #spacer {
             display: none;
         }
@@ -118,8 +114,6 @@
             width: auto;
         }
         
-        /* --- ОСТАЛЬНЫЕ СТИЛИ ИЗ КОДА 2 --- */
-
         .live-update-switch {
           position: absolute;
           top: 12px;
@@ -278,7 +272,6 @@
     <iframe id="scene"></iframe>
     <div id="console"></div>
     <div id="menu"></div>
-    <!-- Имя проекта вынесено сюда, JS будет управлять им -->
     <div id="currentFileName" style="display: none;"></div>
     <div id="colorPicker">
         <div class="color-item"><label for="Comment">Comment</label><input type="color" id="Comment"></div><div class="color-item"><label for="Keyword">Keyword</label><input type="color" id="Keyword"></div><div class="color-item"><label for="String">String</label><input type="color" id="String"></div><div class="color-item"><label for="Number">Number</label><input type="color" id="Number"></div><div class="color-item"><label for="Special">Special</label><input type="color" id="Special"></div><div class="color-item"><label for="Variable">Variable</label><input type="color" id="Variable"></div><div class="color-item"><label for="Property">Property</label><input type="color" id="Property"></div><div class="color-item"><label for="Definition">Definition</label><input type="color" id="Definition"></div><div class="color-item"><label for="Function">Function</label><input type="color" id="Function"></div><div class="color-item"><label for="Operator">Operator</label><input type="color" id="Operator"></div><div class="color-item"><label for="HTMLBracket">HTML Bracket</label><input type="color" id="HTMLBracket"></div><div class="color-item"><label for="HighlightedBracket">Highlighted Bracket</label><input type="color" id="HighlightedBracket"></div><div class="color-item"><label for="Class">Class</label><input type="color" id="Class"></div><div class="color-item"><label for="Regex">Regex</label><input type="color" id="Regex"></div><div class="color-item"><label for="HTMLTag">HTML Tag</label><input type="color" id="HTMLTag"></div><div class="color-item"><label for="HTMLAttribute">HTML Attribute</label><input type="color" id="HTMLAttribute"></div><div class="color-item"><label for="OtherText">Other Text</label><input type="color" id="OtherText"></div><button id="importBtn">Import</button><button id="exportBtn">Export</button>
@@ -313,6 +306,7 @@ const colorPicker = document.getElementById('colorPicker');
 const importBtn = document.getElementById('importBtn');
 const exportBtn = document.getElementById('exportBtn');
 const fileTabsContainer = document.getElementById('file-tabs');
+const liveUpdateToggle = document.getElementById('liveUpdateToggle');
 
 let files = {};
 let fileOrder = [];
@@ -349,9 +343,7 @@ document.body.style.backgroundColor = '#2d2d2d';
 }`
 };
 
-// --- НОВАЯ ФУНКЦИЯ checkOverflow ИЗ КОДА 1 (АДАПТИРОВАННАЯ) ---
 function checkOverflow() {
-    // Получаем элементы при каждом вызове, т.к. они могут перерисовываться
     const addBtn = document.getElementById('add-file-btn');
     const projectName = document.getElementById('currentFileName');
 
@@ -360,18 +352,16 @@ function checkOverflow() {
     const TAB_FULL_WIDTH = 232;
     const TAB_MARGIN = 2;
 
-    // Учитываем ширину названия проекта, только если оно видимо
     const projectNameWidth = (projectName.style.display !== 'none' && getComputedStyle(projectName).display !== 'none') 
                              ? projectName.offsetWidth 
                              : 0;
     
-    // Суммируем ширину всех вкладок, кнопки "+" и названия проекта
     const requiredSpace =
         (fileOrder.length * (TAB_FULL_WIDTH + TAB_MARGIN)) +
         addBtn.offsetWidth +
         projectNameWidth;
 
-    const availableSpace = fileTabsContainer.clientWidth - 20; // 20px - паддинги контейнера
+    const availableSpace = fileTabsContainer.clientWidth - 20; 
 
     if (requiredSpace > availableSpace) {
         fileTabsContainer.classList.add('tabs-overflow');
@@ -380,11 +370,9 @@ function checkOverflow() {
     }
 }
 
-// --- ОБНОВЛЕННАЯ ФУНКЦИЯ renderTabs (ОБЪЕДИНЕННАЯ) ---
 function renderTabs() {
-    // Сохраняем ссылку на DOM-узел имени проекта, т.к. он будет удален и добавлен заново
     const projectNameEl = document.getElementById('currentFileName');
-    fileTabsContainer.innerHTML = ''; // Полностью очищаем контейнер
+    fileTabsContainer.innerHTML = ''; 
 
     const tabsWrapper = document.createElement('div');
     tabsWrapper.id = 'tabs-wrapper';
@@ -444,17 +432,14 @@ function renderTabs() {
     const spacer = document.createElement('div');
     spacer.id = 'spacer';
     
-    // Добавляем все элементы в контейнер в правильном порядке
     fileTabsContainer.appendChild(tabsWrapper);
     fileTabsContainer.appendChild(addBtn);
     fileTabsContainer.appendChild(spacer);
-    fileTabsContainer.appendChild(projectNameEl); // Возвращаем элемент имени проекта
+    fileTabsContainer.appendChild(projectNameEl); 
     
-    // Вызываем проверку переполнения после перерисовки
     setTimeout(checkOverflow, 0);
 }
 
-// --- Весь остальной JS код из Кода 2 ---
 function showNotification(message) {
     let el = document.getElementById('notification');
     if (!el) {
@@ -739,7 +724,7 @@ function switchTab(filename) {
     activeFileName = filename;
     editor.swapDoc(files[filename].doc);
     editor.setOption('mode', getModeForFilename(filename));
-    renderTabs(); // Вызов перерисовки обеспечивает правильное отображение и проверку переполнения
+    renderTabs(); 
     editor.focus();
 }
 
@@ -783,7 +768,9 @@ function closeFile(filename) {
         renderTabs(); 
     }
 
-    updateScene();
+    if (liveUpdateToggle.checked) {
+        updateScene();
+    }
 }
 
 function renameFile(oldName, newName) {
@@ -818,7 +805,10 @@ function renameFile(oldName, newName) {
     }
 
     renderTabs();
-    updateScene();
+    
+    if (liveUpdateToggle.checked) {
+        updateScene();
+    }
 }
 
 function resolveInjections(code, processingStack = new Set()) {
@@ -910,7 +900,6 @@ function updateScene() {
 
 editor.on("change", updateScene);
 
-const liveUpdateToggle = document.getElementById('liveUpdateToggle');
 liveUpdateToggle.addEventListener('change', function() {
     if (this.checked) {
         editor.on("change", updateScene);
@@ -1269,11 +1258,10 @@ async function exportAllProjectsAsZip() {
 
 function formatDate(date) { const diff = (new Date() - date) / 1000; if(diff < 60) return `${Math.round(diff)}s`; if(diff < 3600) return `${Math.round(diff/60)}m`; if(diff < 86400) return `${Math.round(diff/3600)}h`; return `${Math.round(diff/86400)}d`; }
 
-// Обновленная функция для вызова checkOverflow
 function updateCurrentFileName() {
     if (currentProjectId === null) {
         currentFileName.style.display = 'none';
-        checkOverflow(); // Проверяем переполнение, т.к. место освободилось
+        checkOverflow(); 
         return;
     }
     getCodes().then(projects => {
@@ -1285,7 +1273,7 @@ function updateCurrentFileName() {
         } else {
             currentFileName.style.display = 'none';
         }
-        checkOverflow(); // Проверяем переполнение, т.к. место могло измениться
+        checkOverflow(); 
     });
 }
 
