@@ -4,15 +4,159 @@
     <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64x64.png">
     <meta charset="UTF-8">
+    <title>CodiuM</title>
     <style>
         body, html { margin: 0; padding: 0; height: 100vh; overflow: hidden; font-family: sans-serif; background: #1e1e1e; color: #e0e0e0; }
-        #file-tabs { position: absolute; top: 0; left: 0; width: 100%; background: #3c3c3c; z-index: 11; display: flex; flex-wrap: wrap; padding: 5px 5px 0 50px; box-sizing: border-box; height: 40px; }
-        .tab { background: #2d2d2d; color: #ccc; padding: 8px 15px; cursor: pointer; border-radius: 6px 6px 0 0; margin-right: 2px; position: relative; font-size: 14px; }
-        .tab:hover { background: #4a4a4a; }
-        .tab.active { background: #272822; color: #fff; border-bottom: 2px solid #f92672; }
+        
+        /* --- СТИЛИ ИЗ КОДА 1, АДАПТИРОВАННЫЕ ДЛЯ КОДА 2 --- */
+
+        #file-tabs {
+            display: flex;
+            align-items: stretch; 
+            background: #3c3c3c;
+            padding: 5px 10px 0 55px;
+            box-sizing: border-box;
+            height: 40px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 11;
+        }
+
+        #tabs-wrapper {
+            display: flex;
+            align-items: flex-end;
+            min-width: 0; 
+            overflow: hidden;
+            flex: 0 0 auto; /* Начальное состояние: не растягиваться */
+        }
+
+        .tab {
+            display: flex; 
+            align-items: center;
+            justify-content: center;
+            background: #2d2d2d;
+            color: #ccc;
+            cursor: pointer;
+            border-radius: 6px; /* В неактивном состоянии скругление полное */
+            margin-right: 2px;
+            min-width: 1px;
+            overflow: hidden;
+            flex-shrink: 0; /* Начальное состояние: не сжиматься */
+            width: 232px;
+            height: 35px;
+            box-sizing: border-box;
+            position: relative;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .tab span {
+            padding: 8px 15px;
+            white-space: nowrap;
+            overflow: hidden;
+            -webkit-mask-image: linear-gradient(to right, transparent, black 15px, black calc(100% - 15px), transparent);
+            mask-image: linear-gradient(to right, transparent, black 15px, black calc(100% - 15px), transparent);
+        }
+
+        .tab.active {
+            background: #1e1e1e; /* Цвет как у body, как в коде 1 */
+            color: #fff;
+            border-radius: 6px 6px 0 0; /* Срезанные нижние углы для активной вкладки */
+            height: 35px;
+            border-bottom: none; /* Убираем бордер из кода 2, чтобы соответствовать коду 1 */
+        }
+
+        .tab:not(.active):hover, #add-file-btn:hover {
+            background: #4a4a4a;
+        }
+        
         .tab.dragging { opacity: 0.5; }
-        #add-file-btn { background: #2d2d2d; color: #ccc; padding: 8px 12px; cursor: pointer; border-radius: 6px 6px 0 0; font-weight: bold; }
-        #add-file-btn:hover { background: #4a4a4a; }
+
+        #add-file-btn, #currentFileName, #spacer {
+             align-self: center; 
+        }
+        
+        #add-file-btn {
+            background: #2d2d2d;
+            color: #ccc;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 6px; 
+            font-weight: bold;
+            flex-shrink: 0;
+            margin-right: 2px;
+            height: 30px; 
+            box-sizing: border-box;
+        }
+
+        #spacer {
+            flex: 1 1 auto; 
+            min-width: 10px;
+        }
+        
+        #currentFileName {
+            color: #ccc;
+            padding: 0 15px;
+            white-space: nowrap;
+            flex-shrink: 0;
+            /* display: none; будет управляться JS */
+        }
+        
+        /* Логика сжатия, как в коде 1 */
+        #file-tabs.tabs-overflow #spacer {
+            display: none;
+        }
+        
+        #file-tabs.tabs-overflow #tabs-wrapper {
+            flex: 1 1 auto;
+        }
+
+        #file-tabs.tabs-overflow .tab {
+            flex: 1 1 232px; 
+            width: auto;
+        }
+        
+        /* --- ОСТАЛЬНЫЕ СТИЛИ ИЗ КОДА 2 --- */
+
+        .live-update-switch {
+          position: absolute;
+          top: 12px;
+          left: 15px;
+          width: 28px;
+          height: 16px;
+          z-index: 12;
+        }
+        .live-update-switch input { display: none; }
+
+        .slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: #555;
+          transition: .4s;
+          border-radius: 16px;
+        }
+
+        .slider:before {
+          position: absolute;
+          content: "";
+          height: 12px;
+          width: 12px;
+          left: 2px;
+          bottom: 2px;
+          background-color: #ccc;
+          transition: .4s;
+          border-radius: 50%;
+        }
+
+        input:checked + .slider { background-color: #292622; }
+        input:checked + .slider:before { transform: translateX(12px); }
+
         #editor { top: 40px; height: calc(100% - 40px); z-index: 10; }
         #editor, #scene, #console { width: 100%; border: none; position: absolute; left: 0; }
         #scene { height: 100%; top: 0; }
@@ -78,7 +222,6 @@
         #menu button .name { color: #ff9800; font-weight: bold; display: block; }
         #saveBtn { background: #4CAF50 !important; }
         #saveBtn:hover { background: #45a049 !important; }
-        #currentFileName { position: fixed; top: 10px; right: 10px; background: rgba(0, 0, 0, 0.5); padding: 5px 10px; border-radius: 8px; z-index: 1000; }
         #fileInfo { margin-bottom: 10px; }
         #colorPicker { position: fixed; top: 50%; right: 20px; transform: translateY(-50%); background: rgba(30, 30, 30, 0.9); border: 1px solid #444; padding: 20px; display: none; flex-direction: column; align-items: center; z-index: 1000; max-height: 80vh; overflow-y: auto; border-radius: 12px; box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3); }
         .color-item { display: flex; align-items: center; margin-bottom: 10px; width: 100%; }
@@ -89,43 +232,6 @@
         #importBtn, #exportBtn { display: inline-block; margin-top: 10px; padding: 5px 10px; background: #4CAF50; color: white; border: none; cursor: pointer; border-radius: 8px; }
         #importBtn:hover, #exportBtn:hover { background: #45a049; }
         
-        .live-update-switch {
-          position: absolute;
-          top: 10px;
-          left: 15px;
-          width: 28px;
-          height: 16px;
-          z-index: 12;
-        }
-        .live-update-switch input { display: none; }
-        
-        .slider {
-          position: absolute;
-          cursor: pointer;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-color: #555;
-          transition: .4s;
-          border-radius: 16px;
-        }
-        
-        .slider:before {
-          position: absolute;
-          content: "";
-          height: 12px;
-          width: 12px;
-          left: 2px;
-          bottom: 2px;
-          background-color: #ccc;
-          transition: .4s;
-          border-radius: 50%;
-        }
-        
-        input:checked + .slider { background-color: #292622; }
-        input:checked + .slider:before { transform: translateX(12px); }
-
         #menu-controls { flex: 0 0 180px; display: flex; flex-direction: column; }
         #menu-main-actions { flex: 1; display: flex; flex-direction: column; justify-content: center; }
         #project-list { flex: 1 1 auto; overflow-y: auto; max-height: calc(80vh - 40px); scrollbar-width: thin; scrollbar-color: #555 transparent; }
@@ -172,11 +278,12 @@
     <iframe id="scene"></iframe>
     <div id="console"></div>
     <div id="menu"></div>
-    <div id="currentFileName"></div>
+    <!-- Имя проекта вынесено сюда, JS будет управлять им -->
+    <div id="currentFileName" style="display: none;"></div>
     <div id="colorPicker">
         <div class="color-item"><label for="Comment">Comment</label><input type="color" id="Comment"></div><div class="color-item"><label for="Keyword">Keyword</label><input type="color" id="Keyword"></div><div class="color-item"><label for="String">String</label><input type="color" id="String"></div><div class="color-item"><label for="Number">Number</label><input type="color" id="Number"></div><div class="color-item"><label for="Special">Special</label><input type="color" id="Special"></div><div class="color-item"><label for="Variable">Variable</label><input type="color" id="Variable"></div><div class="color-item"><label for="Property">Property</label><input type="color" id="Property"></div><div class="color-item"><label for="Definition">Definition</label><input type="color" id="Definition"></div><div class="color-item"><label for="Function">Function</label><input type="color" id="Function"></div><div class="color-item"><label for="Operator">Operator</label><input type="color" id="Operator"></div><div class="color-item"><label for="HTMLBracket">HTML Bracket</label><input type="color" id="HTMLBracket"></div><div class="color-item"><label for="HighlightedBracket">Highlighted Bracket</label><input type="color" id="HighlightedBracket"></div><div class="color-item"><label for="Class">Class</label><input type="color" id="Class"></div><div class="color-item"><label for="Regex">Regex</label><input type="color" id="Regex"></div><div class="color-item"><label for="HTMLTag">HTML Tag</label><input type="color" id="HTMLTag"></div><div class="color-item"><label for="HTMLAttribute">HTML Attribute</label><input type="color" id="HTMLAttribute"></div><div class="color-item"><label for="OtherText">Other Text</label><input type="color" id="OtherText"></div><button id="importBtn">Import</button><button id="exportBtn">Export</button>
     </div>
-    <script>
+<script>
 const editor = CodeMirror(document.getElementById("editor"), {
     lineNumbers: true,
     mode: "htmlmixed",
@@ -242,6 +349,112 @@ document.body.style.backgroundColor = '#2d2d2d';
 }`
 };
 
+// --- НОВАЯ ФУНКЦИЯ checkOverflow ИЗ КОДА 1 (АДАПТИРОВАННАЯ) ---
+function checkOverflow() {
+    // Получаем элементы при каждом вызове, т.к. они могут перерисовываться
+    const addBtn = document.getElementById('add-file-btn');
+    const projectName = document.getElementById('currentFileName');
+
+    if (!addBtn || !projectName || !fileTabsContainer) return;
+
+    const TAB_FULL_WIDTH = 232;
+    const TAB_MARGIN = 2;
+
+    // Учитываем ширину названия проекта, только если оно видимо
+    const projectNameWidth = (projectName.style.display !== 'none' && getComputedStyle(projectName).display !== 'none') 
+                             ? projectName.offsetWidth 
+                             : 0;
+    
+    // Суммируем ширину всех вкладок, кнопки "+" и названия проекта
+    const requiredSpace =
+        (fileOrder.length * (TAB_FULL_WIDTH + TAB_MARGIN)) +
+        addBtn.offsetWidth +
+        projectNameWidth;
+
+    const availableSpace = fileTabsContainer.clientWidth - 20; // 20px - паддинги контейнера
+
+    if (requiredSpace > availableSpace) {
+        fileTabsContainer.classList.add('tabs-overflow');
+    } else {
+        fileTabsContainer.classList.remove('tabs-overflow');
+    }
+}
+
+// --- ОБНОВЛЕННАЯ ФУНКЦИЯ renderTabs (ОБЪЕДИНЕННАЯ) ---
+function renderTabs() {
+    // Сохраняем ссылку на DOM-узел имени проекта, т.к. он будет удален и добавлен заново
+    const projectNameEl = document.getElementById('currentFileName');
+    fileTabsContainer.innerHTML = ''; // Полностью очищаем контейнер
+
+    const tabsWrapper = document.createElement('div');
+    tabsWrapper.id = 'tabs-wrapper';
+    
+    fileOrder.forEach(filename => {
+        if (!files[filename]) return;
+        
+        const tab = document.createElement('div');
+        tab.className = 'tab';
+        tab.dataset.filename = filename;
+        tab.title = filename;
+
+        const tabTextSpan = document.createElement('span');
+        tabTextSpan.textContent = filename;
+        tab.appendChild(tabTextSpan);
+
+        if (filename !== 'index.html') {
+            tab.draggable = true;
+        }
+
+        if (filename === activeFileName) {
+            tab.classList.add('active');
+        }
+
+        tab.onclick = () => switchTab(filename);
+
+        tab.addEventListener('mousedown', (e) => {
+            if (e.button === 1) { 
+                e.preventDefault();
+                closeFile(filename);
+            }
+        });
+
+        tab.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            const newName = prompt(`Rename file "${filename}":`, filename);
+            renameFile(filename, newName);
+        });
+        
+        tab.addEventListener('dragstart', () => {
+            setTimeout(() => tab.classList.add('dragging'), 0);
+        });
+
+        tab.addEventListener('dragend', () => {
+            tab.classList.remove('dragging');
+        });
+
+        tabsWrapper.appendChild(tab);
+    });
+
+    const addBtn = document.createElement('div');
+    addBtn.id = 'add-file-btn';
+    addBtn.textContent = '+';
+    addBtn.title = 'New File';
+    addBtn.onclick = createNewFile;
+
+    const spacer = document.createElement('div');
+    spacer.id = 'spacer';
+    
+    // Добавляем все элементы в контейнер в правильном порядке
+    fileTabsContainer.appendChild(tabsWrapper);
+    fileTabsContainer.appendChild(addBtn);
+    fileTabsContainer.appendChild(spacer);
+    fileTabsContainer.appendChild(projectNameEl); // Возвращаем элемент имени проекта
+    
+    // Вызываем проверку переполнения после перерисовки
+    setTimeout(checkOverflow, 0);
+}
+
+// --- Весь остальной JS код из Кода 2 ---
 function showNotification(message) {
     let el = document.getElementById('notification');
     if (!el) {
@@ -254,7 +467,6 @@ function showNotification(message) {
     setTimeout(() => { el.style.opacity = '0'; }, 2000);
 }
 
-// ИЗМЕНЕНИЕ: Алфавит расширен до 87 символов, добавлены ,.:?/
 const URL_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%&()*+-;=@[]^_{}~,.:?/";
 const BASE = BigInt(URL_ALPHABET.length);
 const ALPHABET_MAP = new Map(URL_ALPHABET.split('').map((c, i) => [c, BigInt(i)]));
@@ -476,61 +688,13 @@ function initializeEditorWithFiles(fileSet, loadedFileOrder) {
     updateScene();
 }
 
-function renderTabs() {
-    fileTabsContainer.innerHTML = '';
-    
-    fileOrder.forEach(filename => {
-        if (!files[filename]) return;
-        
-        const tab = document.createElement('div');
-        tab.className = 'tab';
-        tab.textContent = filename;
-        tab.dataset.filename = filename;
-
-        if (filename !== 'index.html') {
-            tab.draggable = true;
-        }
-
-        if (filename === activeFileName) {
-            tab.classList.add('active');
-        }
-
-        tab.onclick = () => switchTab(filename);
-
-        tab.addEventListener('mousedown', (e) => {
-            if (e.button === 1) {
-                e.preventDefault();
-                closeFile(filename);
-            }
-        });
-
-        tab.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            const newName = prompt(`Rename file "${filename}":`, filename);
-            renameFile(filename, newName);
-        });
-        
-        tab.addEventListener('dragstart', () => {
-            setTimeout(() => tab.classList.add('dragging'), 0);
-        });
-
-        tab.addEventListener('dragend', () => {
-            tab.classList.remove('dragging');
-        });
-
-        fileTabsContainer.appendChild(tab);
-    });
-
-    const addBtn = document.createElement('div');
-    addBtn.id = 'add-file-btn';
-    addBtn.textContent = '+';
-    addBtn.title = 'New File';
-    addBtn.onclick = createNewFile;
-    fileTabsContainer.appendChild(addBtn);
-}
+window.addEventListener('resize', checkOverflow);
 
 function getDragAfterElement(container, x) {
-    const draggableElements = [...container.querySelectorAll('.tab[draggable="true"]:not(.dragging)')];
+    const tabsWrapper = document.getElementById('tabs-wrapper');
+    if(!tabsWrapper) return null;
+
+    const draggableElements = [...tabsWrapper.querySelectorAll('.tab[draggable="true"]:not(.dragging)')];
 
     return draggableElements.reduce((closest, child) => {
         const box = child.getBoundingClientRect();
@@ -547,20 +711,22 @@ fileTabsContainer.addEventListener('dragover', e => {
     e.preventDefault();
     const afterElement = getDragAfterElement(fileTabsContainer, e.clientX);
     const dragging = document.querySelector('.dragging');
-    if (dragging) {
+    const tabsWrapper = document.getElementById('tabs-wrapper');
+
+    if (dragging && tabsWrapper) {
         if (afterElement == null) {
-            const addBtn = document.getElementById('add-file-btn');
-            fileTabsContainer.insertBefore(dragging, addBtn);
+            tabsWrapper.appendChild(dragging);
         } else {
-            fileTabsContainer.insertBefore(dragging, afterElement);
+            tabsWrapper.insertBefore(dragging, afterElement);
         }
     }
 });
 
 fileTabsContainer.addEventListener('drop', e => {
     e.preventDefault();
-    const newOrderedTabs = fileTabsContainer.querySelectorAll('.tab');
-    fileOrder = Array.from(newOrderedTabs).map(tab => tab.dataset.filename);
+    const tabsWrapper = document.getElementById('tabs-wrapper');
+    if (!tabsWrapper) return;
+    fileOrder = Array.from(tabsWrapper.querySelectorAll('.tab')).map(tab => tab.dataset.filename);
 });
 
 function switchTab(filename) {
@@ -573,7 +739,7 @@ function switchTab(filename) {
     activeFileName = filename;
     editor.swapDoc(files[filename].doc);
     editor.setOption('mode', getModeForFilename(filename));
-    renderTabs();
+    renderTabs(); // Вызов перерисовки обеспечивает правильное отображение и проверку переполнения
     editor.focus();
 }
 
@@ -585,7 +751,7 @@ function createNewFile() {
             doc: CodeMirror.Doc('', getModeForFilename(filename))
         };
         fileOrder.push(filename);
-        switchTab(filename);
+        switchTab(filename); 
     } else if (files[filename]) {
         alert("A file with this name already exists.");
     }
@@ -604,9 +770,19 @@ function closeFile(filename) {
     }
 
     if (activeFileName === filename) {
-        switchTab('index.html');
+        const newActiveIndex = Math.max(0, index - 1);
+        const newActiveFile = fileOrder.length > 0 ? fileOrder[newActiveIndex] : null;
+        if (newActiveFile) {
+            switchTab(newActiveFile);
+        } else {
+            activeFileName = null;
+            editor.setValue('');
+            renderTabs();
+        }
+    } else {
+        renderTabs(); 
     }
-    renderTabs();
+
     updateScene();
 }
 
@@ -1093,7 +1269,26 @@ async function exportAllProjectsAsZip() {
 
 function formatDate(date) { const diff = (new Date() - date) / 1000; if(diff < 60) return `${Math.round(diff)}s`; if(diff < 3600) return `${Math.round(diff/60)}m`; if(diff < 86400) return `${Math.round(diff/3600)}h`; return `${Math.round(diff/86400)}d`; }
 
-function updateCurrentFileName() { if (currentProjectId === null) { currentFileName.style.display = 'none'; return; } getCodes().then(projects => { const currentProject = projects.find(p => p.id === currentProjectId); if (currentProject && currentProject.name) { currentFileName.textContent = `Project: ${currentProject.name}`; currentFileName.style.display = 'block'; } else { currentFileName.style.display = 'none'; } }); }
+// Обновленная функция для вызова checkOverflow
+function updateCurrentFileName() {
+    if (currentProjectId === null) {
+        currentFileName.style.display = 'none';
+        checkOverflow(); // Проверяем переполнение, т.к. место освободилось
+        return;
+    }
+    getCodes().then(projects => {
+        const currentProject = projects.find(p => p.id === currentProjectId);
+        if (currentProject && currentProject.name) {
+            currentFileName.textContent = currentProject.name;
+            currentFileName.title = `Project: ${currentProject.name}`;
+            currentFileName.style.display = 'block';
+        } else {
+            currentFileName.style.display = 'none';
+        }
+        checkOverflow(); // Проверяем переполнение, т.к. место могло измениться
+    });
+}
+
 function updateFileInfo() { getCodes().then(projects => { const totalSize = projects.reduce((acc, p) => acc + JSON.stringify(p.files).length, 0); const fileInfoEl = document.getElementById('fileInfo'); if(fileInfoEl) fileInfoEl.textContent = `${(totalSize/1024).toFixed(2)} KB, Projects: ${projects.length}`; }); }
 
 const colorTypes = { Comment: 'comment', Keyword: 'keyword', String: 'string', Number: 'number', Special: 'atom', Variable: 'variable', Property: 'property', Definition: 'def', Function: 'variable-2', Operator: 'operator', HTMLBracket: 'bracket', HighlightedBracket: 'matchingbracket', Class: 'variable-3', Regex: 'string-2', HTMLTag: 'tag', HTMLAttribute: 'attribute', OtherText: 'text' };
@@ -1219,6 +1414,6 @@ openDB().then(async () => {
         loadFallbackProject();
     }
 });
-    </script>
+</script>
 </body>
 </html>
