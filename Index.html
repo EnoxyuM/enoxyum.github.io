@@ -722,7 +722,9 @@ function initializeEditorWithFiles(fileSet, loadedOpenTabs) {
     }
     
     renderAll();
-    updateScene();
+    if (liveUpdateToggle.checked) {
+        updateScene();
+    }
 }
 
 if (!isPreviewMode) {
