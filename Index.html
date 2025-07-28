@@ -771,7 +771,7 @@ function switchTab(filepath) {
 
     activeFilePath = filepath;
     editor.swapDoc(files[filepath].doc);
-    editor.setOption('mode', getModeForFilename(filepath));
+    editor.setOption('mode', getModeForFilename(activeFilePath));
     renderAll(); 
     editor.focus();
 }
@@ -883,11 +883,27 @@ function updateScene() {
 }
 
 if (!isPreviewMode) {
-    editor.on("change", () => {
-        if (liveUpdateToggle.checked) updateScene();
-    });
-    liveUpdateToggle.addEventListener('change', function() { if (this.checked) { editor.on("change", updateScene); updateScene(); } else { editor.off("change", updateScene); } });
+    if (localStorage.getItem('liveUpdateEnabled') === 'false') {
+        liveUpdateToggle.checked = false;
+    }
 
+    const configureLiveUpdate = () => {
+        editor.off("change", updateScene);
+        if (liveUpdateToggle.checked) {
+            editor.on("change", updateScene);
+        }
+    };
+
+    configureLiveUpdate();
+
+    liveUpdateToggle.addEventListener('change', function() {
+        localStorage.setItem('liveUpdateEnabled', this.checked);
+        configureLiveUpdate();
+        if (this.checked) {
+            updateScene();
+        }
+    });
+    
     let showingEditor = false, showingConsole = false;
     function toggleEditor() {
         if (showingEditor) {
