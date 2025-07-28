@@ -51,6 +51,7 @@
 ## 🧪 Updates
 
 ~27.07.2025
+*   **Copy all files to clipboard button 📋** Perfect for sending to AI
 *   **Share as URL:** Share whole your project as URL link 🤯
 *   **Preview in new tab button** in top right corner and in ESC menu as URL link
 *   **Project sorting** by creation date and change date
