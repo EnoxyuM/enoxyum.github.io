@@ -19,7 +19,7 @@
 ### File Tabs
 | Action | Description |
 | :--- | :--- |
-| **Middle Click** | Close file tab |
+| **Middle Click** | Close tab |
 | **Right Click** | Rename file |
 
 ### Project Menu (ESC)
@@ -28,6 +28,13 @@
 | **Left Click** | Load project |
 | **Middle Click** | Delete project |
 | **Right Click** | Rename project |
+
+### Project files Menu (Click on Project name to open)
+| Action | Description |
+| :--- | :--- |
+| **Left Click** | Open file in tab |
+| **Middle Click** | Delete file |
+| **Right Click** | Context Menu(New file, New folder, Rename) |
 
 ## ✨ Features
 
@@ -54,7 +61,9 @@
 ### Code Injection
 
 ```javascript
-//<<FILE_NAME
+//<<FileName
+or
+//<<FolderName/FileName
 ```
 
 This feature literally lets you add content of any Tab into another. Using this you can easily break your code into small pices.
