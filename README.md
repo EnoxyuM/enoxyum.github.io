@@ -29,7 +29,7 @@
 | **Middle Click** | Delete project |
 | **Right Click** | Rename project |
 
-### Project files Menu (Click on Project name to open)
+### Project files Menu (Click on 📁Project name to open)
 | Action | Description |
 | :--- | :--- |
 | **Left Click** | Open file in tab |
