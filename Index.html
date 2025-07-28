@@ -868,15 +868,8 @@ function updateScene() {
         }
     });
 
-    let finalHtml = doc.documentElement.outerHTML;
-
+    const finalHtml = doc.documentElement.outerHTML;
     if (isPreviewMode) {
-        const disableLivePreviewScript = '<script>localStorage.setItem("liveUpdateEnabled", "false");<\/script>';
-        if (finalHtml.includes('<head>')) {
-            finalHtml = finalHtml.replace('<head>', '<head>' + disableLivePreviewScript);
-        } else {
-            finalHtml = disableLivePreviewScript + finalHtml;
-        }
         scene.srcdoc = finalHtml;
     } else {
         const wrappedCode= `<script>
