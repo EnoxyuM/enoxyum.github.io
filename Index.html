@@ -591,7 +591,7 @@ async function generateShareableUrl() {
         
         const url = `${location.origin}${location.pathname}#p=${encodedData}`;
         await navigator.clipboard.writeText(url);
-        showNotification('Link copied (optimized & compressed)');
+        showNotification('Link copied');
     } catch (e) {
         console.error("Share error:", e);
         showNotification('Error creating link');
@@ -616,7 +616,7 @@ async function loadFromUrlHash() {
             currentProjectId = null;
             updateCurrentFileName();
             history.replaceState(null, '', location.pathname + location.search);
-            showNotification('Project loaded from URL');
+            showNotification('URL Project loaded');
             return true;
         }
     } catch(e) { 
