@@ -132,6 +132,29 @@
         #tabs-container.tabs-overflow #tabs-wrapper { flex: 1 1 auto; }
         #tabs-container.tabs-overflow .tab { flex: 1 1 232px; width: auto; }
 
+        #copy-btn {
+            position: absolute;
+            top: 5px;
+            right: 45px;
+            width: 30px;
+            height: 30px;
+            background-color: #2d2d2d;
+            color: #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+            border-radius: 6px;
+            z-index: 12;
+            border: 1px solid #3c3c3c;
+            user-select: none;
+        }
+        #copy-btn:hover {
+            background-color: #4a4a4a;
+            color: #fff;
+        }
+        
         #run-btn {
             position: absolute;
             top: 5px;
@@ -314,7 +337,7 @@
       if (location.hash === '#t' || location.hash.startsWith('#t=')) {
         document.write(`<style>
             body, html { background: #fff !important; }
-            #file-tabs, #file-panel, #editor, #menu, #colorPicker, .live-update-switch, #console, #context-menu, #notification, #run-btn { display: none !important; }
+            #file-tabs, #file-panel, #editor, #menu, #colorPicker, .live-update-switch, #console, #context-menu, #notification, #run-btn, #copy-btn { display: none !important; }
             #scene {
                 position: fixed; top: 0; left: 0;
                 width: 100vw; height: 100vh;
@@ -352,6 +375,7 @@
              <div id="add-file-btn" title="New File (in root)">+</div>
              <div id="spacer"></div>
         </div>
+        <div id="copy-btn" title="Copy all files to clipboard">📋</div>
         <div id="run-btn" title="Save and Run in New Tab">▶</div>
     </div>
 
@@ -409,6 +433,7 @@ const exportBtn = document.getElementById('exportBtn');
 const liveUpdateToggle = document.getElementById('liveUpdateToggle');
 const contextMenu = document.getElementById('context-menu');
 const runBtn = document.getElementById('run-btn');
+const copyBtn = document.getElementById('copy-btn');
 
 let files = {};
 let openTabs = [];
@@ -1373,6 +1398,38 @@ if (isPreviewMode) {
     }
 
 } else {
+    copyBtn.addEventListener('click', () => {
+        if (activeFilePath && files[activeFilePath]) {
+            files[activeFilePath].code = editor.getValue();
+        }
+
+        const output = [];
+        const fileKeys = Object.keys(files).sort();
+        
+        const indexHtmlPosition = fileKeys.indexOf('index.html');
+        if (indexHtmlPosition > -1) {
+            fileKeys.splice(indexHtmlPosition, 1);
+            fileKeys.unshift('index.html');
+        }
+
+        for (const path of fileKeys) {
+            if (path.split('/').pop() === '.p') continue;
+
+            if (files[path]) {
+                output.push(`${path}:\n${files[path].code}`);
+            }
+        }
+
+        const textToCopy = output.join('\n\n');
+
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            showNotification('Code for all files copied');
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+            showNotification('Error: Could not copy code');
+        });
+    });
+    
     runBtn.addEventListener('click', async () => {
         await saveCurrentCode(true);
         window.open(`${location.origin}${location.pathname}#t`, '_blank');
