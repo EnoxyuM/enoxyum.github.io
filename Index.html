@@ -53,7 +53,7 @@
             position: absolute;
             top: 5px;
             left: calc(55px + 150px + 5px);
-            right: 10px;
+            right: 50px;
             transition: left 0.3s ease;
         }
 
@@ -131,6 +131,29 @@
         #tabs-container.tabs-overflow #spacer { display: none; }
         #tabs-container.tabs-overflow #tabs-wrapper { flex: 1 1 auto; }
         #tabs-container.tabs-overflow .tab { flex: 1 1 232px; width: auto; }
+
+        #run-btn {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            width: 30px;
+            height: 30px;
+            background-color: #2d2d2d;
+            color: #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+            border-radius: 6px;
+            z-index: 12;
+            border: 1px solid #3c3c3c;
+            user-select: none;
+        }
+        #run-btn:hover {
+            background-color: #4a4a4a;
+            color: #fff;
+        }
         
         .live-update-switch {
           position: absolute;
@@ -287,6 +310,20 @@
         .export-arrow.exported { filter: brightness(0.5); }
         #notification { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background-color: #4CAF50; color: white; padding: 15px; border-radius: 6px; z-index: 2000; opacity: 0; transition: opacity 0.5s ease-in-out; pointer-events: none; box-shadow: 0 3px 10px rgba(0,0,0,0.5); }
     </style>
+    <script>
+      if (location.hash === '#t' || location.hash.startsWith('#t=')) {
+        document.write(`<style>
+            body, html { background: #fff !important; }
+            #file-tabs, #file-panel, #editor, #menu, #colorPicker, .live-update-switch, #console, #context-menu, #notification, #run-btn { display: none !important; }
+            #scene {
+                position: fixed; top: 0; left: 0;
+                width: 100vw; height: 100vh;
+                border: none; visibility: visible;
+                pointer-events: auto;
+            }
+        </style>`);
+      }
+    </script>
     <script src="https://unpkg.com/pako@2.0.4/dist/pako.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/codemirror.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/codemirror.min.css">
@@ -315,6 +352,7 @@
              <div id="add-file-btn" title="New File (in root)">+</div>
              <div id="spacer"></div>
         </div>
+        <div id="run-btn" title="Save and Run in New Tab">▶</div>
     </div>
 
     <div id="file-panel"></div>
@@ -328,27 +366,35 @@
         <div class="color-item"><label for="Comment">Comment</label><input type="color" id="Comment"></div><div class="color-item"><label for="Keyword">Keyword</label><input type="color" id="Keyword"></div><div class="color-item"><label for="String">String</label><input type="color" id="String"></div><div class="color-item"><label for="Number">Number</label><input type="color" id="Number"></div><div class="color-item"><label for="Special">Special</label><input type="color" id="Special"></div><div class="color-item"><label for="Variable">Variable</label><input type="color" id="Variable"></div><div class="color-item"><label for="Property">Property</label><input type="color" id="Property"></div><div class="color-item"><label for="Definition">Definition</label><input type="color" id="Definition"></div><div class="color-item"><label for="Function">Function</label><input type="color" id="Function"></div><div class="color-item"><label for="Operator">Operator</label><input type="color" id="Operator"></div><div class="color-item"><label for="HTMLBracket">HTML Bracket</label><input type="color" id="HTMLBracket"></div><div class="color-item"><label for="HighlightedBracket">Highlighted Bracket</label><input type="color" id="HighlightedBracket"></div><div class="color-item"><label for="Class">Class</label><input type="color" id="Class"></div><div class="color-item"><label for="Regex">Regex</label><input type="color" id="Regex"></div><div class="color-item"><label for="HTMLTag">HTML Tag</label><input type="color" id="HTMLTag"></div><div class="color-item"><label for="HTMLAttribute">HTML Attribute</label><input type="color" id="HTMLAttribute"></div><div class="color-item"><label for="OtherText">Other Text</label><input type="color" id="OtherText"></div><button id="importBtn">Import</button><button id="exportBtn">Export</button>
     </div>
 <script>
+const isPreviewMode = location.hash === '#t' || location.hash.startsWith('#t=');
+
 const editorElement = document.getElementById('editor');
-const editor = CodeMirror(editorElement, {
-    lineNumbers: true,
-    mode: "htmlmixed",
-    theme: "monokai",
-    lineWrapping: true,
-    viewportMargin: Infinity,
-    matchBrackets: true,
-    autoCloseBrackets: true,
-    indentUnit: 4,
-    tabSize: 4,
-    indentWithTabs: false,
-    extraKeys: {
-        "Ctrl-Space": "autocomplete",
-        "Ctrl-S": function(cm) {
-            saveCurrentCode(true);
-            return false;
-        }
-    },
-    highlightSelectionMatches: {showToken: /\w/, annotateScrollbar: true}
-});
+let editor;
+
+if (!isPreviewMode) {
+    editor = CodeMirror(editorElement, {
+        lineNumbers: true,
+        mode: "htmlmixed",
+        theme: "monokai",
+        lineWrapping: true,
+        viewportMargin: Infinity,
+        matchBrackets: true,
+        autoCloseBrackets: true,
+        indentUnit: 4,
+        tabSize: 4,
+        indentWithTabs: false,
+        extraKeys: {
+            "Ctrl-Space": "autocomplete",
+            "Ctrl-S": function(cm) {
+                saveCurrentCode(true);
+                return false;
+            }
+        },
+        highlightSelectionMatches: {showToken: /\w/, annotateScrollbar: true}
+    });
+} else {
+    editorElement.remove();
+}
 
 const scene = document.getElementById('scene');
 const consoleElem = document.getElementById('console');
@@ -362,6 +408,7 @@ const importBtn = document.getElementById('importBtn');
 const exportBtn = document.getElementById('exportBtn');
 const liveUpdateToggle = document.getElementById('liveUpdateToggle');
 const contextMenu = document.getElementById('context-menu');
+const runBtn = document.getElementById('run-btn');
 
 let files = {};
 let openTabs = [];
@@ -373,6 +420,7 @@ const blobUrls = [];
 const initialFiles = { 'index.html': { code: ``, doc: CodeMirror.Doc(``, 'htmlmixed') } };
 
 function checkOverflow() {
+    if (isPreviewMode) return;
     const addBtn = document.getElementById('add-file-btn');
     if (!addBtn || !tabsContainer) return;
 
@@ -547,7 +595,7 @@ function deserializeProjectOptimized(bytes) {
     return { filesToLoad, fileOrderToLoad };
 }
 
-async function generateShareableUrl() {
+async function generateShareableUrl(prefix = '#p=') {
     try {
         if (activeFilePath) files[activeFilePath].code = editor.getValue();
         
@@ -558,9 +606,9 @@ async function generateShareableUrl() {
         
         const encodedData = encodeBaseCustom(compressed);
         
-        const url = `${location.origin}${location.pathname}#p=${encodedData}`;
+        const url = `${location.origin}${location.pathname}${prefix}${encodedData}`;
         await navigator.clipboard.writeText(url);
-        showNotification('Link copied');
+        showNotification(prefix === '#p=' ? 'URL link copied' : 'Preview link copied');
     } catch (e) {
         console.error("Share error:", e);
         showNotification('Error creating link');
@@ -627,7 +675,10 @@ function initializeEditorWithFiles(fileSet, loadedOpenTabs) {
     updateScene();
 }
 
-window.addEventListener('resize', checkOverflow);
+if (!isPreviewMode) {
+    window.addEventListener('resize', checkOverflow);
+}
+
 
 function getDragAfterElement(container, x) {
     const draggableElements = [...container.querySelectorAll('.tab[draggable="true"]:not(.dragging)')];
@@ -641,24 +692,26 @@ function getDragAfterElement(container, x) {
         }
     }, { offset: Number.NEGATIVE_INFINITY }).element;
 }
-
-tabsWrapper.addEventListener('dragover', e => {
-    e.preventDefault();
-    const afterElement = getDragAfterElement(tabsWrapper, e.clientX);
-    const dragging = document.querySelector('.dragging');
-    if (dragging) {
-        if (afterElement == null) {
-            tabsWrapper.appendChild(dragging);
-        } else {
-            tabsWrapper.insertBefore(dragging, afterElement);
+if (!isPreviewMode) {
+    tabsWrapper.addEventListener('dragover', e => {
+        e.preventDefault();
+        const afterElement = getDragAfterElement(tabsWrapper, e.clientX);
+        const dragging = document.querySelector('.dragging');
+        if (dragging) {
+            if (afterElement == null) {
+                tabsWrapper.appendChild(dragging);
+            } else {
+                tabsWrapper.insertBefore(dragging, afterElement);
+            }
         }
-    }
-});
+    });
 
-tabsWrapper.addEventListener('drop', e => {
-    e.preventDefault();
-    openTabs = Array.from(tabsWrapper.querySelectorAll('.tab')).map(tab => tab.dataset.filepath);
-});
+    tabsWrapper.addEventListener('drop', e => {
+        e.preventDefault();
+        openTabs = Array.from(tabsWrapper.querySelectorAll('.tab')).map(tab => tab.dataset.filepath);
+    });
+}
+
 
 function switchTab(filepath) {
     if (filepath === activeFilePath || !files[filepath]) return;
@@ -731,16 +784,16 @@ function updateScene() {
     blobUrls.forEach(url => URL.revokeObjectURL(url));
     blobUrls.length = 0;
 
-    if (activeFilePath && files[activeFilePath]) {
+    if (!isPreviewMode && activeFilePath && files[activeFilePath]) {
         files[activeFilePath].code = editor.getValue();
     }
 
     let htmlCode = files['index.html'] ? files['index.html'].code : '<p style="color:red;">Error: index.html not found.</p>';
-if (files['index.html']) {
-    htmlCode = resolveInjections(htmlCode, new Set(['index.html']));
-}
+    if (files['index.html']) {
+        htmlCode = resolveInjections(htmlCode, new Set(['index.html']));
+    }
 
-const doc = new DOMParser().parseFromString(htmlCode, 'text/html');
+    const doc = new DOMParser().parseFromString(htmlCode, 'text/html');
 
     doc.querySelectorAll('script[src]').forEach(tag => {
         const src = tag.getAttribute('src');
@@ -764,59 +817,85 @@ const doc = new DOMParser().parseFromString(htmlCode, 'text/html');
     });
 
     const finalHtml = doc.documentElement.outerHTML;
-    const wrappedCode= `<script>
+    if (isPreviewMode) {
+        scene.srcdoc = finalHtml;
+    } else {
+        const wrappedCode= `<script>
             window.onerror = (m,s,l,c,e) => { window.parent.postMessage({type: 'error', content: 'Error: ' + m}, '*'); return true; };
             const oL=console.log; console.log = (...a) => { window.parent.postMessage({type:'log', content:a.join(' ')},'*'); oL.apply(this,a);};
             const oE=console.error; console.error = (...a) => { window.parent.postMessage({type:'error', content:a.join(' ')},'*'); oE.apply(this,a);};
             window.addEventListener('beforeunload', e => e.stopImmediatePropagation());
         <\/script>` + finalHtml;
-    scene.srcdoc = wrappedCode;
+        scene.srcdoc = wrappedCode;
+    }
 }
 
-editor.on("change", () => {
-    if (liveUpdateToggle.checked) updateScene();
-});
-liveUpdateToggle.addEventListener('change', function() { if (this.checked) { editor.on("change", updateScene); updateScene(); } else { editor.off("change", updateScene); } });
+if (!isPreviewMode) {
+    editor.on("change", () => {
+        if (liveUpdateToggle.checked) updateScene();
+    });
+    liveUpdateToggle.addEventListener('change', function() { if (this.checked) { editor.on("change", updateScene); updateScene(); } else { editor.off("change", updateScene); } });
 
-let showingEditor = false, showingConsole = false;
-function toggleEditor() {
-    if (showingEditor) {
-        editorElement.style.display = 'none';
-        document.getElementById('file-tabs').style.display = 'none';
-        document.querySelector('.live-update-switch').style.display = 'none';
-        if (filePanel.classList.contains('open')) toggleFilePanel();
-        scene.focus();
-        scene.style.zIndex = '5';
-        editorElement.style.pointerEvents = 'none';
-        scene.style.pointerEvents = 'auto';
-    } else {
-        editorElement.style.display = 'block';
-        document.getElementById('file-tabs').style.display = 'flex';
-        document.querySelector('.live-update-switch').style.display = 'block';
-        updateProjectTitle();
-        editor.focus();
-        scene.style.zIndex = '0';
-        editorElement.style.pointerEvents = 'auto';
-        scene.style.pointerEvents = 'none';
+    let showingEditor = false, showingConsole = false;
+    function toggleEditor() {
+        if (showingEditor) {
+            editorElement.style.display = 'none';
+            document.getElementById('file-tabs').style.display = 'none';
+            document.querySelector('.live-update-switch').style.display = 'none';
+            if (filePanel.classList.contains('open')) toggleFilePanel();
+            scene.focus();
+            scene.style.zIndex = '5';
+            editorElement.style.pointerEvents = 'none';
+            scene.style.pointerEvents = 'auto';
+        } else {
+            editorElement.style.display = 'block';
+            document.getElementById('file-tabs').style.display = 'flex';
+            document.querySelector('.live-update-switch').style.display = 'block';
+            updateProjectTitle();
+            editor.focus();
+            scene.style.zIndex = '0';
+            editorElement.style.pointerEvents = 'auto';
+            scene.style.pointerEvents = 'none';
+        }
+        showingEditor = !showingEditor;
     }
-    showingEditor = !showingEditor;
+    function toggleConsole() { consoleElem.style.display = showingConsole ? 'none' : 'block'; showingConsole = !showingConsole; }
+    let altPressed = false, shiftAltPressed = false;
+    document.addEventListener('keydown', e => { 
+        if (isPreviewMode) return;
+        if (e.key === 'Escape') { toggleMenu(); } 
+        else if (e.altKey && !e.shiftKey && !altPressed) { e.preventDefault(); altPressed = true; toggleEditor(); } 
+        else if (e.altKey && e.shiftKey && !shiftAltPressed) { e.preventDefault(); shiftAltPressed = true; toggleConsole(); } 
+    });
+    document.addEventListener('keyup', e => { 
+        if (isPreviewMode) return;
+        if (!e.altKey) { altPressed = false; shiftAltPressed = false; } 
+    });
+    scene.addEventListener('load', () => {
+        if (scene.contentWindow) {
+            scene.contentWindow.addEventListener('keydown', e => { 
+                if (isPreviewMode) { e.preventDefault(); return; }
+                if (e.key === 'Escape') { e.preventDefault(); toggleMenu(); } 
+                else if (e.altKey && !e.shiftKey) { e.preventDefault(); toggleEditor(); } 
+                else if (e.altKey && e.shiftKey) { e.preventDefault(); toggleConsole(); } 
+            });
+        }
+    });
+    function logToConsole(type, content) { 
+      if (isPreviewMode) {
+          console[type === 'error' ? 'error' : 'log'](`[Preview] ${content}`);
+          return;
+      }
+      const logElem = document.createElement('div'); logElem.className = type; logElem.textContent = content; consoleElem.appendChild(logElem); consoleElem.scrollTop = consoleElem.scrollHeight; 
+    }
+    window.addEventListener('message', e => { if (e.source === scene.contentWindow) { logToConsole(e.data.type, e.data.content); } });
+    editorElement.style.display = 'block'; consoleElem.style.display = 'none'; scene.style.zIndex = '0'; editor.focus(); editorElement.style.pointerEvents = 'auto'; scene.style.pointerEvents = 'none'; showingEditor = true;
+    let fontSize = 14; editorElement.addEventListener('wheel', e => { if (e.ctrlKey) { e.preventDefault(); fontSize += e.deltaY > 0 ? -1 : 1; fontSize = Math.max(8, Math.min(24, fontSize)); editorElement.style.fontSize = fontSize + 'px'; editor.refresh(); } });
+    let opacity = 0.5; editorElement.addEventListener('wheel', e => { if (e.shiftKey) { e.preventDefault(); opacity += e.deltaY > 0 ? -0.05 : 0.05; opacity = Math.max(0.1, Math.min(1, opacity)); editorElement.style.backgroundColor = `rgba(30, 30, 30, ${opacity})`; } });
+    window.addEventListener('beforeunload', e => e.stopImmediatePropagation());
+    function toggleMenu() { if (menu.style.display === 'none' || menu.style.display === '') { menu.style.display = 'flex'; loadSavedCodes(); } else { menu.style.display = 'none'; colorPicker.style.display = 'none'; } }
 }
-function toggleConsole() { consoleElem.style.display = showingConsole ? 'none' : 'block'; showingConsole = !showingConsole; }
-let altPressed = false, shiftAltPressed = false;
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { toggleMenu(); } else if (e.altKey && !e.shiftKey && !altPressed) { e.preventDefault(); altPressed = true; toggleEditor(); } else if (e.altKey && e.shiftKey && !shiftAltPressed) { e.preventDefault(); shiftAltPressed = true; toggleConsole(); } });
-document.addEventListener('keyup', e => { if (!e.altKey) { altPressed = false; shiftAltPressed = false; } });
-scene.addEventListener('load', () => {
-    if (scene.contentWindow) {
-        scene.contentWindow.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); toggleMenu(); } else if (e.altKey && !e.shiftKey) { e.preventDefault(); toggleEditor(); } else if (e.altKey && e.shiftKey) { e.preventDefault(); toggleConsole(); } });
-    }
-});
-function logToConsole(type, content) { const logElem = document.createElement('div'); logElem.className = type; logElem.textContent = content; consoleElem.appendChild(logElem); consoleElem.scrollTop = consoleElem.scrollHeight; }
-window.addEventListener('message', e => { if (e.source === scene.contentWindow) { logToConsole(e.data.type, e.data.content); } });
-editorElement.style.display = 'block'; consoleElem.style.display = 'none'; scene.style.zIndex = '0'; editor.focus(); editorElement.style.pointerEvents = 'auto'; scene.style.pointerEvents = 'none'; showingEditor = true;
-let fontSize = 14; editorElement.addEventListener('wheel', e => { if (e.ctrlKey) { e.preventDefault(); fontSize += e.deltaY > 0 ? -1 : 1; fontSize = Math.max(8, Math.min(24, fontSize)); editorElement.style.fontSize = fontSize + 'px'; editor.refresh(); } });
-let opacity = 0.5; editorElement.addEventListener('wheel', e => { if (e.shiftKey) { e.preventDefault(); opacity += e.deltaY > 0 ? -0.05 : 0.05; opacity = Math.max(0.1, Math.min(1, opacity)); editorElement.style.backgroundColor = `rgba(30, 30, 30, ${opacity})`; } });
-window.addEventListener('beforeunload', e => e.stopImmediatePropagation());
-function toggleMenu() { if (menu.style.display === 'none' || menu.style.display === '') { menu.style.display = 'flex'; loadSavedCodes(); } else { menu.style.display = 'none'; colorPicker.style.display = 'none'; } }
+
 let db;
 const DB_NAME = 'CodeEditorDB_Projects', DB_VERSION = 1, STORE_NAME = 'projects';
 function openDB() { return new Promise((resolve, reject) => { const request = indexedDB.open(DB_NAME, DB_VERSION); request.onupgradeneeded = e => { db = e.target.result; if (!db.objectStoreNames.contains(STORE_NAME)) { db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true }); } }; request.onsuccess = e => { db = e.target.result; resolve(db); }; request.onerror = e => reject('Error opening database'); }); }
@@ -875,7 +954,7 @@ async function loadSavedCodes() {
         const dateB = currentSortMode === 'created' ? (b.createdDate || b.date) : b.date;
         return new Date(dateB) - new Date(dateA);
     });
-    menu.innerHTML = `<div id="menu-controls"><div id="menu-main-actions"><button id="saveBtn">Save New Project</button><button id="exportToggleBtn">Export Projects</button><button id="exportAllBtn">Export All</button><button id="shareUrlBtn">Share as URL</button><button id="sortBtn"></button><button id="colorThemeBtn">Color Theme</button></div><div id="fileInfo"></div></div><div id="project-list"></div>`;
+    menu.innerHTML = `<div id="menu-controls"><div id="menu-main-actions"><button id="saveBtn">Save New Project</button><button id="exportToggleBtn">Export Projects</button><button id="exportAllBtn">Export All</button><button id="shareUrlBtn">Share as URL</button><button id="sharePreviewBtn">Share as Preview</button><button id="sortBtn"></button><button id="colorThemeBtn">Color Theme</button></div><div id="fileInfo"></div></div><div id="project-list"></div>`;
     const projectList = menu.querySelector('#project-list');
     savedProjects.forEach(project => {
         const button = document.createElement('button');
@@ -911,7 +990,8 @@ async function loadSavedCodes() {
     document.getElementById('saveBtn').onclick = () => saveCurrentCode(false);
     document.getElementById('exportToggleBtn').onclick = () => projectList.classList.toggle('show-export-arrows');
     document.getElementById('exportAllBtn').onclick = exportAllProjectsAsZip;
-    document.getElementById('shareUrlBtn').onclick = generateShareableUrl;
+    document.getElementById('shareUrlBtn').onclick = () => generateShareableUrl('#p=');
+    document.getElementById('sharePreviewBtn').onclick = () => generateShareableUrl('#t=');
     const sortBtn = document.getElementById('sortBtn');
     sortBtn.textContent = `Sort by: ${currentSortMode==='created'?'Created':'Changed'}`;
     sortBtn.onclick = () => { currentSortMode = (currentSortMode === 'created') ? 'changed' : 'created'; localStorage.setItem('projectSortMode', currentSortMode); loadSavedCodes(); };
@@ -1006,6 +1086,7 @@ async function exportAllProjectsAsZip() {
 }
 function formatDate(d) {const s=(new Date()-d)/1000;if(s<60)return`${Math.round(s)}s`;if(s<3600)return`${Math.round(s/60)}m`;if(s<86400)return`${Math.round(s/3600)}h`;return`${Math.round(s/86400)}d`;}
 function updateProjectTitle() {
+    if (isPreviewMode) return;
     if (currentProjectId === null) {
         projectTitle.textContent = '📁 URL Project';
         projectTitle.title = 'Unsaved URL Project';
@@ -1024,7 +1105,7 @@ function updateProjectTitle() {
         checkOverflow();
     });
 }
-function updateFileInfo() { getCodes().then(projects => { const totalSize = projects.reduce((acc, p) => acc + JSON.stringify(p.files).length, 0); const fileInfoEl = document.getElementById('fileInfo'); if(fileInfoEl) fileInfoEl.textContent = `${(totalSize/1024).toFixed(2)} KB, Projects: ${projects.length}`; }); }
+function updateFileInfo() { if (isPreviewMode) return; getCodes().then(projects => { const totalSize = projects.reduce((acc, p) => acc + JSON.stringify(p.files).length, 0); const fileInfoEl = document.getElementById('fileInfo'); if(fileInfoEl) fileInfoEl.textContent = `${(totalSize/1024).toFixed(2)} KB, Projects: ${projects.length}`; }); }
 
 function toggleFilePanel() {
     filePanel.classList.toggle('open');
@@ -1032,10 +1113,15 @@ function toggleFilePanel() {
     document.getElementById('file-tabs').classList.toggle('file-panel-open');
     setTimeout(() => { editor.refresh(); checkOverflow(); }, 300);
 }
-projectTitle.addEventListener('click', toggleFilePanel);
-document.getElementById('add-file-btn').onclick = () => createNewItem(false, '');
+
+if (!isPreviewMode) {
+    projectTitle.addEventListener('click', toggleFilePanel);
+    document.getElementById('add-file-btn').onclick = () => createNewItem(false, '');
+}
+
 
 function renderFilePanel() {
+    if (isPreviewMode) return;
     filePanel.innerHTML = '';
     const paths = Object.keys(files);
     const tree = {};
@@ -1087,39 +1173,42 @@ function renderFilePanel() {
     });
 }
 function renderAll() {
+    if (isPreviewMode) return;
     renderTabs();
     renderFilePanel();
 }
+if (!isPreviewMode) {
+    filePanel.addEventListener('mousedown', e => {
+        if (e.button !== 1) return;
 
-filePanel.addEventListener('mousedown', e => {
-    if (e.button !== 1) return;
+        const target = e.target.closest('.file-entry');
+        if (!target) return;
 
-    const target = e.target.closest('.file-entry');
-    if (!target) return;
+        e.preventDefault();
 
-    e.preventDefault();
+        const pathToDelete = target.dataset.path;
+        const isFolder = target.classList.contains('folder');
 
-    const pathToDelete = target.dataset.path;
-    const isFolder = target.classList.contains('folder');
+        if (pathToDelete === 'index.html') {
+            showNotification("Cannot delete index.html.");
+            return;
+        }
 
-    if (pathToDelete === 'index.html') {
-        showNotification("Cannot delete index.html.");
-        return;
-    }
+        if (isFolder) {
+            const keysToDelete = Object.keys(files).filter(path => path.startsWith(pathToDelete + '/'));
+            keysToDelete.forEach(path => {
+                closeTab(path);
+                delete files[path];
+            });
+        } else {
+            closeTab(pathToDelete);
+            delete files[pathToDelete];
+        }
 
-    if (isFolder) {
-        const keysToDelete = Object.keys(files).filter(path => path.startsWith(pathToDelete + '/'));
-        keysToDelete.forEach(path => {
-            closeTab(path);
-            delete files[path];
-        });
-    } else {
-        closeTab(pathToDelete);
-        delete files[pathToDelete];
-    }
+        renderAll();
+    });
+}
 
-    renderAll();
-});
 
 function showContextMenu(x, y, path, isFolder) {
     contextMenu.style.left = `${x}px`;
@@ -1139,7 +1228,11 @@ function showContextMenu(x, y, path, isFolder) {
         document.getElementById('ctx-delete').onclick = () => deleteItem(path, isFolder);
     }
 }
-document.addEventListener('click', () => contextMenu.style.display = 'none');
+
+if (!isPreviewMode) {
+    document.addEventListener('click', () => contextMenu.style.display = 'none');
+}
+
 
 function createNewItem(isFolder, basePath) {
     const type = isFolder ? 'folder' : 'file';
@@ -1207,21 +1300,23 @@ function deleteItem(pathToDelete, isFolder) {
     }
     renderAll();
 }
+if (!isPreviewMode) {
+    const colorTypes = { Comment: 'comment', Keyword: 'keyword', String: 'string', Number: 'number', Special: 'atom', Variable: 'variable', Property: 'property', Definition: 'def', Function: 'variable-2', Operator: 'operator', HTMLBracket: 'bracket', HighlightedBracket: 'matchingbracket', Class: 'variable-3', Regex: 'string-2', HTMLTag: 'tag', HTMLAttribute: 'attribute', OtherText: 'text' };
+    const defaultColors = {"Comment":"#04ff00","Keyword":"#0064ff","String":"#ffff00","Number":"#ffffff","Special":"#ff00ae","Variable":"#c880ff","Property":"#757ad7","Definition":"#ff8000","Function":"#00b3ff","Operator":"#ffffff","HTMLBracket":"#fe2aec","HighlightedBracket":"#ff0000","Class":"#00ff88","Regex":"#ff00ff","HTMLTag":"#00b3ff","HTMLAttribute":"#ff7aff","OtherText":"#878787"};
+    function changeColor(type) { const color = document.getElementById(type).value; const style = document.createElement('style'); document.head.appendChild(style); const sheet = style.sheet; if (type === 'HighlightedBracket') sheet.insertRule(`.cm-s-monokai .CodeMirror-${colorTypes[type]} { background-color: ${color} !important; color: #000000 !important; }`, 0); else if (type === 'OtherText') sheet.insertRule(`.cm-s-monokai { color: ${color} !important; }`, 0); else sheet.insertRule(`.cm-s-monokai span.cm-${colorTypes[type]} { color: ${color} !important; }`, 0); localStorage.setItem(`color-${type}`, color); }
+    function loadColors() { for (const type in colorTypes) { const color = localStorage.getItem(`color-${type}`) || defaultColors[type]; if (color) { document.getElementById(type).value = color; changeColor(type); } } }
+    for (const type in colorTypes) document.getElementById(type).addEventListener('change', () => changeColor(type));
+    function exportSettings() { const settings = {}; for (const type in colorTypes) settings[type] = localStorage.getItem(`color-${type}`); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(settings)], {type: "application/json"})); a.download = "code_editor_settings.json"; a.click(); URL.revokeObjectURL(a.href); }
+    function importSettings() { const input = document.createElement('input'); input.type = 'file'; input.accept = '.json'; input.onchange = e => { const file = e.target.files[0]; const reader = new FileReader(); reader.onload = e => { const settings = JSON.parse(e.target.result); for (const type in settings) if (colorTypes.hasOwnProperty(type)) { localStorage.setItem(`color-${type}`, settings[type]); document.getElementById(type).value = settings[type]; changeColor(type); } }; reader.readAsText(file); }; input.click(); }
+    exportBtn.addEventListener('click', exportSettings); importBtn.addEventListener('click', importSettings);
+}
 
-const colorTypes = { Comment: 'comment', Keyword: 'keyword', String: 'string', Number: 'number', Special: 'atom', Variable: 'variable', Property: 'property', Definition: 'def', Function: 'variable-2', Operator: 'operator', HTMLBracket: 'bracket', HighlightedBracket: 'matchingbracket', Class: 'variable-3', Regex: 'string-2', HTMLTag: 'tag', HTMLAttribute: 'attribute', OtherText: 'text' };
-const defaultColors = {"Comment":"#04ff00","Keyword":"#0064ff","String":"#ffff00","Number":"#ffffff","Special":"#ff00ae","Variable":"#c880ff","Property":"#757ad7","Definition":"#ff8000","Function":"#00b3ff","Operator":"#ffffff","HTMLBracket":"#fe2aec","HighlightedBracket":"#ff0000","Class":"#00ff88","Regex":"#ff00ff","HTMLTag":"#00b3ff","HTMLAttribute":"#ff7aff","OtherText":"#878787"};
-function changeColor(type) { const color = document.getElementById(type).value; const style = document.createElement('style'); document.head.appendChild(style); const sheet = style.sheet; if (type === 'HighlightedBracket') sheet.insertRule(`.cm-s-monokai .CodeMirror-${colorTypes[type]} { background-color: ${color} !important; color: #000000 !important; }`, 0); else if (type === 'OtherText') sheet.insertRule(`.cm-s-monokai { color: ${color} !important; }`, 0); else sheet.insertRule(`.cm-s-monokai span.cm-${colorTypes[type]} { color: ${color} !important; }`, 0); localStorage.setItem(`color-${type}`, color); }
-function loadColors() { for (const type in colorTypes) { const color = localStorage.getItem(`color-${type}`) || defaultColors[type]; if (color) { document.getElementById(type).value = color; changeColor(type); } } }
-for (const type in colorTypes) document.getElementById(type).addEventListener('change', () => changeColor(type));
-function exportSettings() { const settings = {}; for (const type in colorTypes) settings[type] = localStorage.getItem(`color-${type}`); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(settings)], {type: "application/json"})); a.download = "code_editor_settings.json"; a.click(); URL.revokeObjectURL(a.href); }
-function importSettings() { const input = document.createElement('input'); input.type = 'file'; input.accept = '.json'; input.onchange = e => { const file = e.target.files[0]; const reader = new FileReader(); reader.onload = e => { const settings = JSON.parse(e.target.result); for (const type in settings) if (colorTypes.hasOwnProperty(type)) { localStorage.setItem(`color-${type}`, settings[type]); document.getElementById(type).value = settings[type]; changeColor(type); } }; reader.readAsText(file); }; input.click(); }
-exportBtn.addEventListener('click', exportSettings); importBtn.addEventListener('click', importSettings);
 
 function loadFallbackProject() {
-    getCodes().then(savedProjects => {
-        if (savedProjects.length > 0) {
+    getCodes().then(projects => {
+        if (projects.length > 0) {
             savedProjects.sort((a, b) => { const dateA = currentSortMode === 'created' ? (a.createdDate || a.date) : a.date; const dateB = currentSortMode === 'created' ? (b.createdDate || b.date) : b.date; return new Date(dateB) - new Date(dateA); });
-            loadProject(savedProjects[0].id);
+            loadProject(projects[0].id);
         } else {
             initializeEditorWithFiles({ 'index.html': '' }, ['index.html']);
         }
@@ -1229,24 +1324,79 @@ function loadFallbackProject() {
     });
 }
 
-openDB().then(async () => {
-    if (await loadFromUrlHash()) {
-        loadColors();
-        return;
-    }
-    const lastOpenedIdStr = localStorage.getItem('lastOpenedProjectId');
-    if (lastOpenedIdStr) {
-        const lastOpenedId = parseInt(lastOpenedIdStr, 10);
-        const request = db.transaction([STORE_NAME], 'readonly').objectStore(STORE_NAME).get(lastOpenedId);
-        request.onsuccess = e => {
-            if (e.target.result) { loadProject(lastOpenedId); loadColors(); }
-            else { localStorage.removeItem('lastOpenedProjectId'); loadFallbackProject(); }
-        };
-        request.onerror = e => { console.error("Error checking last project:", e); localStorage.removeItem('lastOpenedProjectId'); loadFallbackProject(); };
+
+if (isPreviewMode) {
+    if (location.hash.startsWith('#t=')) {
+        try {
+            const encodedData = location.hash.substring(3);
+            const compressedBytes = decodeBaseCustom(encodedData);
+            const decompressed = pako.ungzip(compressedBytes);
+            const binaryData = new Uint8Array(decompressed);
+            const { filesToLoad } = deserializeProjectOptimized(binaryData);
+
+            if (Object.keys(filesToLoad).length > 0) {
+                for (const filepath in filesToLoad) {
+                   files[filepath] = { code: filesToLoad[filepath] };
+                }
+                updateScene();
+            } else {
+                 scene.srcdoc = `<h1>Error</h1><p>Could not load project from URL.</p>`;
+            }
+        } catch(e) {
+            console.error("URL preview load error:", e);
+            scene.srcdoc = `<h1>Error</h1><p>Invalid or corrupted preview link.</p>`;
+        }
     } else {
-        loadFallbackProject();
+        openDB().then(() => {
+            const lastOpenedIdStr = localStorage.getItem('lastOpenedProjectId');
+            if (!lastOpenedIdStr) {
+                scene.srcdoc = "<h1>Error</h1><p>No project ID found in local storage. Please run a project from the editor first.</p>";
+                return;
+            }
+            const lastOpenedId = parseInt(lastOpenedIdStr, 10);
+            const request = db.transaction([STORE_NAME], 'readonly').objectStore(STORE_NAME).get(lastOpenedId);
+            request.onsuccess = e => {
+                const project = e.target.result;
+                if (project && project.files) {
+                    for (const filepath in project.files) {
+                       files[filepath] = { code: project.files[filepath] };
+                    }
+                    updateScene();
+                } else {
+                    scene.srcdoc = `<h1>Error</h1><p>Project with ID ${lastOpenedId} not found.</p>`;
+                }
+            };
+            request.onerror = e => {
+                scene.srcdoc = `<h1>Error</h1><p>Could not access the project database.</p>`;
+            }
+        });
     }
-});
+
+} else {
+    runBtn.addEventListener('click', async () => {
+        await saveCurrentCode(true);
+        window.open(`${location.origin}${location.pathname}#t`, '_blank');
+    });
+
+    openDB().then(async () => {
+        if (await loadFromUrlHash()) {
+            loadColors();
+            return;
+        }
+        const lastOpenedIdStr = localStorage.getItem('lastOpenedProjectId');
+        if (lastOpenedIdStr) {
+            const lastOpenedId = parseInt(lastOpenedIdStr, 10);
+            const request = db.transaction([STORE_NAME], 'readonly').objectStore(STORE_NAME).get(lastOpenedId);
+            request.onsuccess = e => {
+                if (e.target.result) { loadProject(lastOpenedId); loadColors(); }
+                else { localStorage.removeItem('lastOpenedProjectId'); loadFallbackProject(); }
+            };
+            request.onerror = e => { console.error("Error checking last project:", e); localStorage.removeItem('lastOpenedProjectId'); loadFallbackProject(); };
+        } else {
+            loadFallbackProject();
+        }
+    });
+}
 </script>
 </body>
 </html>
