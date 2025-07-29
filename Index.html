@@ -504,7 +504,6 @@ function renderTabs() {
         tabTextSpan.textContent = shortName;
         tab.appendChild(tabTextSpan);
 
-        // FIX: Check for index.html case-insensitively
         if (filepath.toLowerCase() !== 'index.html') tab.draggable = true;
         if (filepath === activeFilePath) tab.classList.add('active');
 
@@ -519,7 +518,6 @@ function renderTabs() {
         
         tab.addEventListener('contextmenu', e => {
             e.preventDefault();
-            // FIX: Check for index.html case-insensitively
             if (filepath.toLowerCase() === 'index.html') {
                 showNotification("Cannot rename index.html.");
                 return;
@@ -548,7 +546,7 @@ function showNotification(message) {
     setTimeout(() => { el.style.opacity = '0'; }, 3000);
 }
 
-const URL_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%&()*+-;=@[]^_{}~,.:?/";
+const URL_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
 const BASE = BigInt(URL_ALPHABET.length);
 const ALPHABET_MAP = new Map(URL_ALPHABET.split('').map((c, i) => [c, BigInt(i)]));
 
@@ -677,7 +675,6 @@ async function loadFromUrlHash() {
         const { filesToLoad } = deserializeProjectOptimized(binaryData);
 
         if (Object.keys(filesToLoad).length > 0) {
-            // FIX: Pass loaded file order to preserve it
             const newOpenTabs = Object.keys(filesToLoad);
             const indexHtmlPath = newOpenTabs.find(key => key.toLowerCase() === 'index.html');
             if(indexHtmlPath) {
@@ -708,7 +705,6 @@ function getModeForFilename(filename) {
     return 'text/plain';
 }
 
-// FIX: Rewritten function for robustly handling index.html and setting active tabs.
 function initializeEditorWithFiles(fileSet, loadedOpenTabs) {
     files = {};
     for (const filepath in fileSet) {
@@ -721,20 +717,16 @@ function initializeEditorWithFiles(fileSet, loadedOpenTabs) {
     const fileKeys = Object.keys(files);
     const indexHtmlPath = fileKeys.find(key => key.toLowerCase() === 'index.html');
 
-    // If no tabs were loaded, try to open index.html by default
     if (openTabs.length === 0 && indexHtmlPath) {
         openTabs.push(indexHtmlPath);
     }
     
-    // If there are still no open tabs, open the first available file
     if (openTabs.length === 0 && fileKeys.length > 0) {
         openTabs.push(fileKeys[0]);
     }
 
-    // Determine the active file. Priority is: 1. a valid index.html, 2. the first open tab, 3. null
     activeFilePath = indexHtmlPath || (openTabs.length > 0 ? openTabs[0] : null);
 
-    // Ensure the active file is actually open, if not, open it
     if (activeFilePath && !openTabs.includes(activeFilePath)) {
         openTabs.unshift(activeFilePath);
     }
@@ -745,9 +737,7 @@ function initializeEditorWithFiles(fileSet, loadedOpenTabs) {
             editor.setOption('mode', getModeForFilename(activeFilePath));
         }
     } else {
-        // No files to show, maybe a project with only folders, or empty.
         activeFilePath = null;
-        // Clear the editor with a fresh document to avoid showing stale content
         if (!isPreviewMode) {
             editor.swapDoc(CodeMirror.Doc('', 'text/plain'));
         }
@@ -818,7 +808,6 @@ function openFile(filepath) {
 }
 
 function closeTab(filepath) {
-    // FIX: Check for index.html case-insensitively
     if (filepath.toLowerCase() === 'index.html') {
         alert("Cannot close index.html.");
         return;
@@ -874,18 +863,14 @@ function updateScene() {
         files[activeFilePath].code = editor.getValue();
     }
     
-    // FIX: Find index.html case-insensitively to use for the scene
     const fileKeys = Object.keys(files);
     const indexHtmlPath = fileKeys.find(key => key.toLowerCase() === 'index.html');
 
     let htmlCode;
     if (indexHtmlPath && files[indexHtmlPath]) {
-        // Use the found path to get the code
         htmlCode = files[indexHtmlPath].code;
-        // Also use the correct path in the injection check
         htmlCode = resolveInjections(htmlCode, new Set([indexHtmlPath]));
     } else {
-        // Fallback error message if no index.html is found
         htmlCode = '<p style="color:red;">Error: index.html not found.</p>';
     }
 
@@ -1301,7 +1286,6 @@ if (!isPreviewMode) {
         const pathToDelete = target.dataset.path;
         const isFolder = target.classList.contains('folder');
 
-        // FIX: Check for index.html case-insensitively
         if (pathToDelete.toLowerCase() === 'index.html') {
             showNotification("Cannot delete index.html.");
             return;
@@ -1329,7 +1313,6 @@ function showContextMenu(x, y, path, isFolder) {
     contextMenu.style.display = 'block';
 
     let menuItems = `<div id="ctx-new-file">New File</div><div id="ctx-new-folder">New Folder</div>`;
-    // FIX: Check for index.html case-insensitively
     if (path && path.toLowerCase() !== 'index.html') {
         menuItems += `<div id="ctx-rename">Rename</div><div id="ctx-delete">Delete</div>`;
     }
@@ -1495,7 +1478,6 @@ if (isPreviewMode) {
         const output = [];
         const fileKeys = Object.keys(files).sort();
         
-        // FIX: Find index.html case-insensitively and move it to the front
         const indexHtmlPath = fileKeys.find(key => key.toLowerCase() === 'index.html');
         if (indexHtmlPath) {
             const index = fileKeys.indexOf(indexHtmlPath);
@@ -1554,7 +1536,6 @@ if (isPreviewMode) {
                 currentProjectId = null;
                 
                 const newOpenTabs = Object.keys(newFileSet);
-                // FIX: Find index.html case-insensitively and move it to the front
                 const indexHtmlPath = newOpenTabs.find(key => key.toLowerCase() === 'index.html');
                 if (indexHtmlPath) {
                     const index = newOpenTabs.indexOf(indexHtmlPath);
