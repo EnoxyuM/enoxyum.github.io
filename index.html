@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64x64.png">
+    <meta charset="UTF-8">
+    <title>CodiuM</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+      if (location.hash === '#t' || location.hash.startsWith('#t=')) {
+        document.write(`<style>
+            body, html { background: #fff !important; }
+            #file-tabs, #file-panel, #editor, #menu, #colorPicker, .live-update-switch, #console, #context-menu, #notification, #run-btn, #copy-btn, #paste-project-btn { display: none !important; }
+            #scene {
+                position: fixed; top: 0; left: 0;
+                width: 100vw; height: 100vh;
+                border: none; visibility: visible;
+                pointer-events: auto;
+            }
+        </style>`);
+      }
+    </script>
+    <script src="https://unpkg.com/pako@2.0.4/dist/pako.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/codemirror.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/theme/monokai.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/mode/htmlmixed/htmlmixed.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/addon/search/match-highlighter.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/addon/scroll/annotatescrollbar.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/addon/search/matchesonscrollbar.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/addon/mode/simple.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+    <label class="live-update-switch">
+        <input type="checkbox" id="liveUpdateToggle" checked>
+        <span class="slider"></span>
+    </label>
+    
+    <div id="file-tabs">
+        <div id="project-title">📁 Project</div>
+        <div id="tabs-container">
+             <div id="tabs-wrapper"></div>
+             <div id="add-file-btn" title="New File (in root)">+</div>
+             <div id="spacer"></div>
+        </div>
+        <div id="copy-btn" title="Copy all files to clipboard">📋</div>
+        <div id="paste-project-btn" title="Create project from clipboard">📜</div>
+        <div id="run-btn" title="Save and Run in New Tab">▶</div>
+    </div>
+
+    <div id="file-panel"></div>
+    <div id="context-menu"></div>
+    
+    <div id="editor"></div>
+    <iframe id="scene"></iframe>
+    <div id="console"></div>
+    <div id="menu"></div>
+    <div id="colorPicker">
+        <div class="color-item"><label for="Comment">Comment</label><input type="color" id="Comment"></div><div class="color-item"><label for="Keyword">Keyword</label><input type="color" id="Keyword"></div><div class="color-item"><label for="String">String</label><input type="color" id="String"></div><div class="color-item"><label for="Number">Number</label><input type="color" id="Number"></div><div class="color-item"><label for="Special">Special</label><input type="color" id="Special"></div><div class="color-item"><label for="Variable">Variable</label><input type="color" id="Variable"></div><div class="color-item"><label for="Property">Property</label><input type="color" id="Property"></div><div class="color-item"><label for="Definition">Definition</label><input type="color" id="Definition"></div><div class="color-item"><label for="Function">Function</label><input type="color" id="Function"></div><div class="color-item"><label for="Operator">Operator</label><input type="color" id="Operator"></div><div class="color-item"><label for="HTMLBracket">HTML Bracket</label><input type="color" id="HTMLBracket"></div><div class="color-item"><label for="HighlightedBracket">Highlighted Bracket</label><input type="color" id="HighlightedBracket"></div><div class="color-item"><label for="Class">Class</label><input type="color" id="Class"></div><div class="color-item"><label for="Regex">Regex</label><input type="color" id="Regex"></div><div class="color-item"><label for="HTMLTag">HTML Tag</label><input type="color" id="HTMLTag"></div><div class="color-item"><label for="HTMLAttribute">HTML Attribute</label><input type="color" id="HTMLAttribute"></div><div class="color-item"><label for="OtherText">OtherText</label><input type="color" id="OtherText"></div><button id="importBtn">Import</button><button id="exportBtn">Export</button>
+    </div>
+    <div id="notification"></div>
+
+    <script src="js/state.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/sharing.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/preview.js"></script>
+    <script src="js/project.js"></script>
+    <script src="js/init.js"></script>
+
+</body>
+</html>
