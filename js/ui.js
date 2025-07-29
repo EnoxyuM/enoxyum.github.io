@@ -1,3 +1,5 @@
+let currentMediaBlobUrl = null;
+
 function renderAll() {
     if (isPreviewMode) return;
     renderTabs();
@@ -27,6 +29,50 @@ function checkOverflow() {
     } else {
         tabsContainer.classList.remove('tabs-overflow');
     }
+}
+
+function uploadFiles(fileList, basePath) {
+    const filesToProcess = Array.from(fileList);
+    let remaining = filesToProcess.length;
+    if (remaining === 0) return;
+
+    const onDone = () => {
+        renderAll();
+        if (liveUpdateToggle.checked) {
+            updateScene();
+        }
+        showNotification(`Finished uploading ${filesToProcess.length} file(s).`);
+    };
+
+    filesToProcess.forEach(file => {
+        const newPath = (basePath ? `${basePath}/${file.name}` : file.name).replace(/^\//, '');
+
+        if (files[newPath] && !confirm(`File "${newPath}" already exists. Overwrite?`)) {
+            remaining--;
+            if (remaining === 0) onDone();
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = e => {
+            const arrayBuffer = e.target.result;
+            const compressed = pako.gzip(new Uint8Array(arrayBuffer));
+            files[newPath] = {
+                isBinary: true,
+                mimeType: file.type || 'application/octet-stream',
+                content: compressed,
+            };
+            remaining--;
+            if (remaining === 0) onDone();
+        };
+        reader.onerror = e => {
+            showNotification(`Error reading ${file.name}`);
+            console.error(e);
+            remaining--;
+            if (remaining === 0) onDone();
+        };
+        reader.readAsArrayBuffer(file);
+    });
 }
 
 function renderTabs() {
@@ -78,13 +124,70 @@ function renderTabs() {
 
 function switchTab(filepath) {
     if (filepath === activeFilePath || !files[filepath]) return;
-    if (activeFilePath && files[activeFilePath]) files[activeFilePath].code = editor.getValue();
+
+    if (currentMediaBlobUrl) {
+        URL.revokeObjectURL(currentMediaBlobUrl);
+        currentMediaBlobUrl = null;
+    }
+
+    if (activeFilePath && files[activeFilePath] && !files[activeFilePath].isBinary) {
+        files[activeFilePath].code = editor.getValue();
+    }
 
     activeFilePath = filepath;
-    editor.swapDoc(files[filepath].doc);
-    editor.setOption('mode', getModeForFilename(activeFilePath));
+
+    const cmElement = editor.getWrapperElement();
+    const mediaPreviewElement = document.getElementById('media-preview');
+
+    if (files[filepath].isBinary) {
+        const fileData = files[filepath];
+        const mime = fileData.mimeType.toLowerCase();
+
+        if (mime.startsWith('image/') || mime.startsWith('video/') || mime.startsWith('audio/')) {
+            cmElement.style.display = 'none';
+            mediaPreviewElement.style.display = 'flex';
+            mediaPreviewElement.innerHTML = '';
+
+            try {
+                const decompressed = pako.ungzip(fileData.content);
+                const blob = new Blob([decompressed], { type: fileData.mimeType });
+                currentMediaBlobUrl = URL.createObjectURL(blob);
+
+                let mediaElement;
+                if (mime.startsWith('image/')) {
+                    mediaElement = document.createElement('img');
+                } else if (mime.startsWith('video/')) {
+                    mediaElement = document.createElement('video');
+                    mediaElement.controls = true;
+                } else { // audio
+                    mediaElement = document.createElement('audio');
+                    mediaElement.controls = true;
+                }
+                mediaElement.src = currentMediaBlobUrl;
+                mediaPreviewElement.appendChild(mediaElement);
+            } catch (e) {
+                console.error(`Error displaying media file ${filepath}:`, e);
+                cmElement.style.display = 'block';
+                mediaPreviewElement.style.display = 'none';
+                editor.setOption("readOnly", true);
+                editor.swapDoc(CodeMirror.Doc(`// Error displaying binary file: ${filepath}\n// ${e.message}`, 'text/plain'));
+            }
+        } else {
+            cmElement.style.display = 'block';
+            mediaPreviewElement.style.display = 'none';
+            editor.setOption("readOnly", true);
+            editor.swapDoc(CodeMirror.Doc(`// Binary file: ${filepath}\n// Cannot be edited.`, 'text/plain'));
+        }
+    } else {
+        cmElement.style.display = 'block';
+        mediaPreviewElement.style.display = 'none';
+        editor.setOption("readOnly", false);
+        editor.swapDoc(files[filepath].doc);
+        editor.setOption('mode', getModeForFilename(activeFilePath));
+        editor.focus();
+    }
+    
     renderAll(); 
-    editor.focus();
 }
 
 function openFile(filepath) {
@@ -168,13 +271,17 @@ function renderFilePanel() {
             
             if (item._is_file_) {
                 div.className = 'file-entry file';
-                div.textContent = key;
+                if (files[item.path] && files[item.path].isBinary) {
+                    div.textContent = '📦 ' + key;
+                } else {
+                    div.textContent = '📄 ' + key;
+                }
                 div.dataset.path = item.path;
                 if (item.path === activeFilePath) div.classList.add('active');
                 div.onclick = () => openFile(item.path);
             } else {
                 div.className = 'file-entry folder';
-                div.textContent = key;
+                div.textContent = '📁 ' + key;
                 const currentPath = Object.values(item).find(v => v.path)?.path.substring(0, Object.values(item).find(v => v.path).path.indexOf(key) + key.length) || key;
                 div.dataset.path = currentPath;
                 renderTree(item, div, depth + 1);
@@ -199,7 +306,7 @@ function showContextMenu(x, y, path, isFolder) {
     contextMenu.style.top = `${y}px`;
     contextMenu.style.display = 'block';
 
-    let menuItems = `<div id="ctx-new-file">New File</div><div id="ctx-new-folder">New Folder</div>`;
+    let menuItems = `<div id="ctx-new-file">New File</div><div id="ctx-new-folder">New Folder</div><div id="ctx-upload-file">Upload File</div>`;
     if (path && path.toLowerCase() !== 'index.html') {
         menuItems += `<div id="ctx-rename">Rename</div><div id="ctx-delete">Delete</div>`;
     }
@@ -207,6 +314,16 @@ function showContextMenu(x, y, path, isFolder) {
 
     document.getElementById('ctx-new-file').onclick = () => createNewItem(false, isFolder ? path : path.substring(0, path.lastIndexOf('/')));
     document.getElementById('ctx-new-folder').onclick = () => createNewItem(true, isFolder ? path : path.substring(0, path.lastIndexOf('/')));
+    document.getElementById('ctx-upload-file').onclick = () => {
+        const uploadPath = isFolder ? path : path.substring(0, path.lastIndexOf('/'));
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.multiple = true;
+        input.onchange = e => {
+            uploadFiles(e.target.files, uploadPath);
+        };
+        input.click();
+    };
     if (path && path.toLowerCase() !== 'index.html') {
         document.getElementById('ctx-rename').onclick = () => renameItem(path, isFolder);
         document.getElementById('ctx-delete').onclick = () => deleteItem(path, isFolder);
@@ -222,10 +339,10 @@ function createNewItem(isFolder, basePath) {
     if (isFolder) {
         const placeholderPath = `${newPath}/.p`;
         if (files[placeholderPath]) { alert('Folder already exists.'); return; }
-        files[placeholderPath] = { code: '', doc: CodeMirror.Doc('', 'text/plain')};
+        files[placeholderPath] = { code: '', doc: CodeMirror.Doc('', 'text/plain'), isBinary: false };
     } else {
         if (files[newPath]) { alert('File already exists.'); return; }
-        files[newPath] = { code: '', doc: CodeMirror.Doc('', getModeForFilename(newPath))};
+        files[newPath] = { code: '', doc: CodeMirror.Doc('', getModeForFilename(newPath)), isBinary: false };
         openFile(newPath);
     }
     renderAll();

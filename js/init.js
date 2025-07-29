@@ -91,7 +91,95 @@ if (!isPreviewMode) {
     window.addEventListener('beforeunload', e => e.stopImmediatePropagation());
 
     projectTitle.addEventListener('click', toggleFilePanel);
-    document.getElementById('add-file-btn').onclick = () => createNewItem(false, '');
+    
+    const addFileBtn = document.getElementById('add-file-btn');
+    addFileBtn.onclick = () => createNewItem(false, '');
+    addFileBtn.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.multiple = true;
+        input.onchange = e => {
+            uploadFiles(e.target.files, '');
+        };
+        input.click();
+    });
+
+    // --- Drag and Drop Logic ---
+    async function collectFilesFromEntries(entries, path, fileList) {
+        for (const entry of entries) {
+            if (entry.isFile) {
+                const file = await new Promise(resolve => entry.file(resolve));
+                fileList.push({ file, path });
+            } else if (entry.isDirectory) {
+                const newPath = (path ? `${path}/${entry.name}` : entry.name).replace(/^\//, '');
+                const dirReader = entry.createReader();
+                const subEntries = await new Promise(resolve => dirReader.readEntries(resolve));
+                await collectFilesFromEntries(subEntries, newPath, fileList);
+            }
+        }
+    }
+
+    function addDroppedFilesToProject(droppedFiles) {
+        let remaining = droppedFiles.length;
+        if (remaining === 0) return;
+
+        const onDone = () => {
+            renderAll();
+            if (liveUpdateToggle.checked) {
+                updateScene();
+            }
+            showNotification(`Uploaded ${droppedFiles.length} file(s) via drop.`);
+        };
+
+        for (const { file, path } of droppedFiles) {
+            const newPath = (path ? `${path}/${file.name}` : file.name).replace(/^\//, '');
+
+            if (files[newPath] && !confirm(`File "${newPath}" already exists. Overwrite?`)) {
+                remaining--;
+                if (remaining === 0) onDone();
+                continue;
+            }
+
+            const reader = new FileReader();
+            reader.onload = e => {
+                const arrayBuffer = e.target.result;
+                const compressed = pako.gzip(new Uint8Array(arrayBuffer));
+                files[newPath] = {
+                    isBinary: true,
+                    mimeType: file.type || 'application/octet-stream',
+                    content: compressed
+                };
+                remaining--;
+                if (remaining === 0) onDone();
+            };
+            reader.onerror = e => {
+                showNotification(`Error reading ${file.name}`);
+                console.error(e);
+                remaining--;
+                if (remaining === 0) onDone();
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    }
+    
+    window.addEventListener('dragover', e => e.preventDefault());
+    window.addEventListener('drop', async e => {
+        e.preventDefault();
+        if (e.target.closest('#menu')) return; // Don't handle drops on the menu
+        
+        if (!e.dataTransfer || !e.dataTransfer.items) return;
+
+        const droppedFiles = [];
+        const entries = Array.from(e.dataTransfer.items).map(item => item.webkitGetAsEntry());
+        
+        await collectFilesFromEntries(entries, '', droppedFiles);
+
+        if (droppedFiles.length > 0) {
+            addDroppedFilesToProject(droppedFiles);
+        }
+    });
+    // --- End Drag and Drop Logic ---
 
     filePanel.addEventListener('mousedown', e => {
         if (e.button !== 1) return;
@@ -124,7 +212,7 @@ if (!isPreviewMode) {
     importBtn.addEventListener('click', importSettings);
 
     copyBtn.addEventListener('click', () => {
-        if (activeFilePath && files[activeFilePath]) {
+        if (activeFilePath && files[activeFilePath] && !files[activeFilePath].isBinary) {
             files[activeFilePath].code = editor.getValue();
         }
         const output = [];
@@ -139,7 +227,7 @@ if (!isPreviewMode) {
         }
         for (const path of fileKeys) {
             if (path.split('/').pop() === '.p') continue;
-            if (files[path]) {
+            if (files[path] && !files[path].isBinary) {
                 output.push(`${path}\n\`\`\`\n${files[path].code}\n\`\`\``);
             }
         }
@@ -169,7 +257,7 @@ if (!isPreviewMode) {
                     const filename = match[1].trim();
                     const code = match[2];
                     if (filename) {
-                        newFileSet[filename] = code;
+                        newFileSet[filename] = { code: code, isBinary: false };
                     }
                 }
                 if (!foundFiles) {
@@ -235,9 +323,7 @@ if (!isPreviewMode) {
             const { filesToLoad } = deserializeProjectOptimized(binaryData);
 
             if (Object.keys(filesToLoad).length > 0) {
-                for (const filepath in filesToLoad) {
-                   files[filepath] = { code: filesToLoad[filepath] };
-                }
+                files = filesToLoad;
                 updateScene();
             } else {
                  scene.srcdoc = `<h1>Error</h1><p>Error loading from URL</p>`;
@@ -258,9 +344,7 @@ if (!isPreviewMode) {
             request.onsuccess = e => {
                 const project = e.target.result;
                 if (project && project.files) {
-                    for (const filepath in project.files) {
-                       files[filepath] = { code: project.files[filepath] };
-                    }
+                    files = project.files;
                     updateScene();
                 } else {
                     scene.srcdoc = `<h1>Error</h1><p>Project with ID ${lastOpenedId} not found</p>`;

@@ -48,14 +48,30 @@ function serializeProjectOptimized(projectFileOrder, projectFiles) {
 
     projectFileOrder.forEach(name => {
         if (!projectFiles[name] || name.split('/').pop() === '.p') return;
-        const code = projectFiles[name].code;
+        
+        const fileData = projectFiles[name];
         const nameBytes = textEncoder.encode(name);
-        const codeBytes = textEncoder.encode(code);
-
+        
         parts.push(encodeVarint(nameBytes.length));
         parts.push(nameBytes);
-        parts.push(encodeVarint(codeBytes.length));
-        parts.push(codeBytes);
+
+        if (fileData.isBinary) {
+            parts.push(new Uint8Array([1]));
+            
+            const mimeTypeBytes = textEncoder.encode(fileData.mimeType);
+            parts.push(encodeVarint(mimeTypeBytes.length));
+            parts.push(mimeTypeBytes);
+
+            const contentBytes = pako.ungzip(fileData.content);
+            parts.push(encodeVarint(contentBytes.length));
+            parts.push(contentBytes);
+        } else {
+            parts.push(new Uint8Array([0]));
+            
+            const codeBytes = textEncoder.encode(fileData.code);
+            parts.push(encodeVarint(codeBytes.length));
+            parts.push(codeBytes);
+        }
     });
 
     const totalLength = parts.reduce((acc, part) => acc + part.length, 0);
@@ -68,34 +84,48 @@ function serializeProjectOptimized(projectFileOrder, projectFiles) {
 function deserializeProjectOptimized(bytes) {
     const textDecoder = new TextDecoder();
     const filesToLoad = {};
-    const fileOrderToLoad = [];
     let offset = 0;
 
     while (offset < bytes.length) {
         const nameLenResult = decodeVarint(bytes, offset);
-        const nameLen = nameLenResult.value;
         offset = nameLenResult.newOffset;
+        const name = textDecoder.decode(bytes.subarray(offset, offset + nameLenResult.value));
+        offset += nameLenResult.value;
+
+        const isBinary = bytes[offset] === 1;
+        offset += 1;
         
-        const name = textDecoder.decode(bytes.subarray(offset, offset + nameLen));
-        offset += nameLen;
+        if (isBinary) {
+            const mimeLenResult = decodeVarint(bytes, offset);
+            offset = mimeLenResult.newOffset;
+            const mimeType = textDecoder.decode(bytes.subarray(offset, offset + mimeLenResult.value));
+            offset += mimeLenResult.value;
 
-        const codeLenResult = decodeVarint(bytes, offset);
-        const codeLen = codeLenResult.value;
-        offset = codeLenResult.newOffset;
+            const contentLenResult = decodeVarint(bytes, offset);
+            offset = contentLenResult.newOffset;
+            const contentBytes = bytes.subarray(offset, offset + contentLenResult.value);
+            offset += contentLenResult.value;
 
-        const code = textDecoder.decode(bytes.subarray(offset, offset + codeLen));
-        offset += codeLen;
+            const compressedContent = pako.gzip(contentBytes);
+            filesToLoad[name] = { isBinary: true, mimeType: mimeType, content: compressedContent };
+        } else {
+            const codeLenResult = decodeVarint(bytes, offset);
+            offset = codeLenResult.newOffset;
+            const code = textDecoder.decode(bytes.subarray(offset, offset + codeLenResult.value));
+            offset += codeLenResult.value;
 
-        filesToLoad[name] = code;
-        fileOrderToLoad.push(name);
+            filesToLoad[name] = { code: code, isBinary: false };
+        }
     }
     
-    return { filesToLoad, fileOrderToLoad };
+    return { filesToLoad };
 }
 
 async function generateShareableUrl(prefix = '#p=') {
     try {
-        if (activeFilePath) files[activeFilePath].code = editor.getValue();
+        if (activeFilePath && files[activeFilePath] && !files[activeFilePath].isBinary) {
+            files[activeFilePath].code = editor.getValue();
+        }
         
         const fileList = Object.keys(files);
         const binaryData = serializeProjectOptimized(fileList, files);

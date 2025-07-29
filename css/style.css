@@ -211,7 +211,33 @@ input:checked + .slider:before { transform: translateX(12px); }
 #editor { top: 40px; height: calc(100% - 40px); z-index: 10; position: absolute; left: 0; width: 100%; transition: left 0.3s ease, width 0.3s ease; }
 #scene, #console { border: none; position: absolute; left: 0; }
 #scene { height: 100%; top: 0; width: 100%;}
+#editor { position: relative; }
 #editor .CodeMirror { height: 100%; background-color: transparent; }
+
+#media-preview {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #272822;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    overflow: auto;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+#media-preview img,
+#media-preview video {
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+    object-fit: contain;
+}
+
+#media-preview audio {
+    width: 80%;
+    max-width: 500px;
+}
 
 #file-panel {
     position: absolute;
@@ -233,8 +259,8 @@ input:checked + .slider:before { transform: translateX(12px); }
 .file-entry { padding: 4px 10px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; user-select: none; }
 .file-entry:hover { background-color: #37373d; }
 .file-entry.active { background-color: #094771; }
-.file-entry.folder::before { content: '📁 '; }
-.file-entry.file::before { content: '📄 '; }
+.file-entry.folder::before { content: ''; }
+.file-entry.file::before { content: ''; }
 
 #context-menu {
     position: fixed;

@@ -3,9 +3,14 @@ function formatDate(d) {const s=(new Date()-d)/1000;if(s<60)return`${Math.round(
 function initializeEditorWithFiles(fileSet, loadedOpenTabs) {
     files = {};
     for (const filepath in fileSet) {
-        const code = fileSet[filepath];
-        const mode = getModeForFilename(filepath);
-        files[filepath] = { code: code, doc: CodeMirror.Doc(code, mode) };
+        const fileData = fileSet[filepath];
+        if (fileData.isBinary) {
+            files[filepath] = fileData;
+        } else {
+            const code = typeof fileData === 'string' ? fileData : fileData.code || '';
+            const mode = getModeForFilename(filepath);
+            files[filepath] = { code: code, doc: CodeMirror.Doc(code, mode), isBinary: false };
+        }
     }
     
     openTabs = loadedOpenTabs.filter(f => files[f]);
@@ -28,8 +33,14 @@ function initializeEditorWithFiles(fileSet, loadedOpenTabs) {
     
     if (activeFilePath && files[activeFilePath]) {
         if (!isPreviewMode) {
-            editor.swapDoc(files[activeFilePath].doc);
-            editor.setOption('mode', getModeForFilename(activeFilePath));
+            if (files[activeFilePath].isBinary) {
+                editor.swapDoc(CodeMirror.Doc('// Cannot edit binary file', 'text/plain'));
+                editor.setOption("readOnly", true);
+            } else {
+                editor.setOption("readOnly", false);
+                editor.swapDoc(files[activeFilePath].doc);
+                editor.setOption('mode', getModeForFilename(activeFilePath));
+            }
         }
     } else {
         activeFilePath = null;
@@ -45,9 +56,25 @@ function initializeEditorWithFiles(fileSet, loadedOpenTabs) {
 }
 
 async function saveCurrentCode(overwrite = false) {
-    if (activeFilePath && files[activeFilePath]) files[activeFilePath].code = editor.getValue();
+    if (activeFilePath && files[activeFilePath] && !files[activeFilePath].isBinary) {
+        files[activeFilePath].code = editor.getValue();
+    }
+    
     const filesToSave = {};
-    for (const filepath in files) filesToSave[filepath] = files[filepath].code;
+    for (const filepath in files) {
+        if (files[filepath].isBinary) {
+            filesToSave[filepath] = {
+                isBinary: true,
+                content: files[filepath].content,
+                mimeType: files[filepath].mimeType
+            };
+        } else {
+            filesToSave[filepath] = {
+                code: files[filepath].code,
+                isBinary: false
+            };
+        }
+    }
     const now = new Date();
 
     if (overwrite && currentProjectId !== null) {
@@ -120,7 +147,7 @@ async function loadSavedCodes() {
                 e.preventDefault();
                 if (localStorage.getItem('lastOpenedProjectId') == project.id) localStorage.removeItem('lastOpenedProjectId');
                 deleteCode(project.id).then(() => {
-                    if (currentProjectId === project.id) { currentProjectId = null; initializeEditorWithFiles({ 'index.html': '' }, ['index.html']); }
+                    if (currentProjectId === project.id) { currentProjectId = null; initializeEditorWithFiles({ 'index.html': { code: '', isBinary: false } }, ['index.html']); }
                     loadSavedCodes(); updateProjectTitle(); updateFileInfo();
                 });
             }
@@ -170,7 +197,7 @@ function loadFallbackProject() {
             projects.sort((a, b) => { const dateA = currentSortMode === 'created' ? (a.createdDate || a.date) : a.date; const dateB = currentSortMode === 'created' ? (b.createdDate || b.date) : b.date; return new Date(dateB) - new Date(dateA); });
             loadProject(projects[0].id);
         } else {
-            initializeEditorWithFiles({ 'index.html': '' }, ['index.html']);
+            initializeEditorWithFiles({ 'index.html': { code: '', isBinary: false } }, ['index.html']);
         }
         loadColors();
     });
@@ -188,7 +215,13 @@ async function exportProjectAsZip(projectId) {
                 const zip = new JSZip();
                 for (const filename in project.files) {
                     if (filename.split('/').pop() === '.p') continue;
-                    zip.file(filename, project.files[filename]);
+                    const fileData = project.files[filename];
+                    if (fileData.isBinary) {
+                        const decompressed = pako.ungzip(fileData.content);
+                        zip.file(filename, decompressed);
+                    } else {
+                        zip.file(filename, fileData.code);
+                    }
                 }
                 
                 zip.generateAsync({ type: "blob" })
@@ -235,7 +268,13 @@ async function exportAllProjectsAsZip() {
                 for (const filename in project.files) {
                     if (filename.split('/').pop() === '.p') continue;
                     if(projectFolder) {
-                       projectFolder.file(filename, project.files[filename]);
+                       const fileData = project.files[filename];
+                       if (fileData.isBinary) {
+                           const decompressed = pako.ungzip(fileData.content);
+                           projectFolder.file(filename, decompressed);
+                       } else {
+                           projectFolder.file(filename, fileData.code);
+                       }
                     }
                 }
             }
