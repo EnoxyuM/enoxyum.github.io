@@ -101,7 +101,7 @@ if (!isPreviewMode) {
         const pathToDelete = target.dataset.path;
         const isFolder = target.classList.contains('folder');
         if (pathToDelete.toLowerCase() === 'index.html') {
-            showNotification("Cannot delete index.html.");
+            showNotification("Cannot delete index.html");
             return;
         }
         if (isFolder) {
@@ -157,7 +157,7 @@ if (!isPreviewMode) {
             try {
                 const text = await navigator.clipboard.readText();
                 if (!text) {
-                    showNotification('Clipboard is empty.');
+                    showNotification('Clipboard is empty');
                     return;
                 }
                 const newFileSet = {};
@@ -173,7 +173,7 @@ if (!isPreviewMode) {
                     }
                 }
                 if (!foundFiles) {
-                    showNotification('Could not parse files from clipboard. Use format:\nfilename\n```\ncode\n```\n...for each file.');
+                    showNotification('Could not parse files from clipboard. Use format:\nfilename\n```\ncode\n```\n...for each file');
                     return;
                 }
                 currentProjectId = null;
@@ -188,13 +188,13 @@ if (!isPreviewMode) {
                 }
                 initializeEditorWithFiles(newFileSet, newOpenTabs);
                 updateProjectTitle();
-                showNotification('Project loaded from clipboard.');
+                showNotification('Project loaded');
             } catch (err) {
                 console.error('Failed to read clipboard or parse project:', err);
                 if (err.name === 'NotAllowedError') {
-                   showNotification('Clipboard access denied by browser.');
+                   showNotification('Clipboard access denied by browser');
                 } else {
-                   showNotification('Error: Could not load from clipboard.');
+                   showNotification('Error: Could not load from clipboard');
                 }
             }
         });
@@ -240,17 +240,17 @@ if (!isPreviewMode) {
                 }
                 updateScene();
             } else {
-                 scene.srcdoc = `<h1>Error</h1><p>Could not load project from URL.</p>`;
+                 scene.srcdoc = `<h1>Error</h1><p>Error loading from URL</p>`;
             }
         } catch(e) {
-            console.error("URL preview load error:", e);
-            scene.srcdoc = `<h1>Error</h1><p>Invalid or corrupted preview link.</p>`;
+            console.error("URL load error:", e);
+            scene.srcdoc = `<h1>Error</h1><p>Invalid preview link</p>`;
         }
     } else {
         openDB().then(() => {
             const lastOpenedIdStr = localStorage.getItem('lastOpenedProjectId');
             if (!lastOpenedIdStr) {
-                scene.srcdoc = "<h1>Error</h1><p>No project ID found in local storage. Please run a project from the editor first.</p>";
+                scene.srcdoc = "<h1>Error</h1><p>No project ID found in local storage. Please run a project from the editor first</p>";
                 return;
             }
             const lastOpenedId = parseInt(lastOpenedIdStr, 10);
@@ -263,11 +263,11 @@ if (!isPreviewMode) {
                     }
                     updateScene();
                 } else {
-                    scene.srcdoc = `<h1>Error</h1><p>Project with ID ${lastOpenedId} not found.</p>`;
+                    scene.srcdoc = `<h1>Error</h1><p>Project with ID ${lastOpenedId} not found</p>`;
                 }
             };
             request.onerror = e => {
-                scene.srcdoc = `<h1>Error</h1><p>Could not access the project database.</p>`;
+                scene.srcdoc = `<h1>Error</h1><p>Could not access the project database</p>`;
             }
         });
     }
