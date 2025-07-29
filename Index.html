@@ -504,7 +504,8 @@ function renderTabs() {
         tabTextSpan.textContent = shortName;
         tab.appendChild(tabTextSpan);
 
-        if (filepath !== 'index.html') tab.draggable = true;
+        // FIX: Check for index.html case-insensitively
+        if (filepath.toLowerCase() !== 'index.html') tab.draggable = true;
         if (filepath === activeFilePath) tab.classList.add('active');
 
         tab.onclick = () => switchTab(filepath);
@@ -518,7 +519,8 @@ function renderTabs() {
         
         tab.addEventListener('contextmenu', e => {
             e.preventDefault();
-            if (filepath === 'index.html') {
+            // FIX: Check for index.html case-insensitively
+            if (filepath.toLowerCase() === 'index.html') {
                 showNotification("Cannot rename index.html.");
                 return;
             }
@@ -675,7 +677,17 @@ async function loadFromUrlHash() {
         const { filesToLoad } = deserializeProjectOptimized(binaryData);
 
         if (Object.keys(filesToLoad).length > 0) {
-            initializeEditorWithFiles(filesToLoad, ['index.html']);
+            // FIX: Pass loaded file order to preserve it
+            const newOpenTabs = Object.keys(filesToLoad);
+            const indexHtmlPath = newOpenTabs.find(key => key.toLowerCase() === 'index.html');
+            if(indexHtmlPath) {
+                const index = newOpenTabs.indexOf(indexHtmlPath);
+                if (index > -1) {
+                    newOpenTabs.splice(index, 1);
+                    newOpenTabs.unshift(indexHtmlPath);
+                }
+            }
+            initializeEditorWithFiles(filesToLoad, newOpenTabs);
             currentProjectId = null;
             updateProjectTitle();
             history.replaceState(null, '', location.pathname + location.search);
@@ -696,6 +708,7 @@ function getModeForFilename(filename) {
     return 'text/plain';
 }
 
+// FIX: Rewritten function for robustly handling index.html and setting active tabs.
 function initializeEditorWithFiles(fileSet, loadedOpenTabs) {
     files = {};
     for (const filepath in fileSet) {
@@ -705,27 +718,47 @@ function initializeEditorWithFiles(fileSet, loadedOpenTabs) {
     }
     
     openTabs = loadedOpenTabs.filter(f => files[f]);
-    if (openTabs.length === 0) {
-        openTabs = ['index.html'].filter(f => files[f]);
+    const fileKeys = Object.keys(files);
+    const indexHtmlPath = fileKeys.find(key => key.toLowerCase() === 'index.html');
+
+    // If no tabs were loaded, try to open index.html by default
+    if (openTabs.length === 0 && indexHtmlPath) {
+        openTabs.push(indexHtmlPath);
+    }
+    
+    // If there are still no open tabs, open the first available file
+    if (openTabs.length === 0 && fileKeys.length > 0) {
+        openTabs.push(fileKeys[0]);
     }
 
-    activeFilePath = 'index.html';
-    if (!files[activeFilePath] || !openTabs.includes(activeFilePath)) {
-      activeFilePath = openTabs.length > 0 ? openTabs[0] : null;
-    }
+    // Determine the active file. Priority is: 1. a valid index.html, 2. the first open tab, 3. null
+    activeFilePath = indexHtmlPath || (openTabs.length > 0 ? openTabs[0] : null);
 
+    // Ensure the active file is actually open, if not, open it
+    if (activeFilePath && !openTabs.includes(activeFilePath)) {
+        openTabs.unshift(activeFilePath);
+    }
+    
     if (activeFilePath && files[activeFilePath]) {
-        editor.swapDoc(files[activeFilePath].doc);
-        editor.setOption('mode', getModeForFilename(activeFilePath));
+        if (!isPreviewMode) {
+            editor.swapDoc(files[activeFilePath].doc);
+            editor.setOption('mode', getModeForFilename(activeFilePath));
+        }
     } else {
-        editor.setValue('');
+        // No files to show, maybe a project with only folders, or empty.
+        activeFilePath = null;
+        // Clear the editor with a fresh document to avoid showing stale content
+        if (!isPreviewMode) {
+            editor.swapDoc(CodeMirror.Doc('', 'text/plain'));
+        }
     }
     
     renderAll();
-    if (liveUpdateToggle.checked) {
+    if (!isPreviewMode && liveUpdateToggle.checked) {
         updateScene();
     }
 }
+
 
 if (!isPreviewMode) {
     window.addEventListener('resize', checkOverflow);
@@ -785,7 +818,8 @@ function openFile(filepath) {
 }
 
 function closeTab(filepath) {
-    if (filepath === 'index.html') {
+    // FIX: Check for index.html case-insensitively
+    if (filepath.toLowerCase() === 'index.html') {
         alert("Cannot close index.html.");
         return;
     }
@@ -839,10 +873,20 @@ function updateScene() {
     if (!isPreviewMode && activeFilePath && files[activeFilePath]) {
         files[activeFilePath].code = editor.getValue();
     }
+    
+    // FIX: Find index.html case-insensitively to use for the scene
+    const fileKeys = Object.keys(files);
+    const indexHtmlPath = fileKeys.find(key => key.toLowerCase() === 'index.html');
 
-    let htmlCode = files['index.html'] ? files['index.html'].code : '<p style="color:red;">Error: index.html not found.</p>';
-    if (files['index.html']) {
-        htmlCode = resolveInjections(htmlCode, new Set(['index.html']));
+    let htmlCode;
+    if (indexHtmlPath && files[indexHtmlPath]) {
+        // Use the found path to get the code
+        htmlCode = files[indexHtmlPath].code;
+        // Also use the correct path in the injection check
+        htmlCode = resolveInjections(htmlCode, new Set([indexHtmlPath]));
+    } else {
+        // Fallback error message if no index.html is found
+        htmlCode = '<p style="color:red;">Error: index.html not found.</p>';
     }
 
     const doc = new DOMParser().parseFromString(htmlCode, 'text/html');
@@ -1257,7 +1301,8 @@ if (!isPreviewMode) {
         const pathToDelete = target.dataset.path;
         const isFolder = target.classList.contains('folder');
 
-        if (pathToDelete === 'index.html') {
+        // FIX: Check for index.html case-insensitively
+        if (pathToDelete.toLowerCase() === 'index.html') {
             showNotification("Cannot delete index.html.");
             return;
         }
@@ -1284,14 +1329,15 @@ function showContextMenu(x, y, path, isFolder) {
     contextMenu.style.display = 'block';
 
     let menuItems = `<div id="ctx-new-file">New File</div><div id="ctx-new-folder">New Folder</div>`;
-    if (path && path !== 'index.html') {
+    // FIX: Check for index.html case-insensitively
+    if (path && path.toLowerCase() !== 'index.html') {
         menuItems += `<div id="ctx-rename">Rename</div><div id="ctx-delete">Delete</div>`;
     }
     contextMenu.innerHTML = menuItems;
 
     document.getElementById('ctx-new-file').onclick = () => createNewItem(false, isFolder ? path : path.substring(0, path.lastIndexOf('/')));
     document.getElementById('ctx-new-folder').onclick = () => createNewItem(true, isFolder ? path : path.substring(0, path.lastIndexOf('/')));
-    if (path && path !== 'index.html') {
+    if (path && path.toLowerCase() !== 'index.html') {
         document.getElementById('ctx-rename').onclick = () => renameItem(path, isFolder);
         document.getElementById('ctx-delete').onclick = () => deleteItem(path, isFolder);
     }
@@ -1383,7 +1429,7 @@ if (!isPreviewMode) {
 function loadFallbackProject() {
     getCodes().then(projects => {
         if (projects.length > 0) {
-            savedProjects.sort((a, b) => { const dateA = currentSortMode === 'created' ? (a.createdDate || a.date) : a.date; const dateB = currentSortMode === 'created' ? (b.createdDate || b.date) : b.date; return new Date(dateB) - new Date(dateA); });
+            projects.sort((a, b) => { const dateA = currentSortMode === 'created' ? (a.createdDate || a.date) : a.date; const dateB = currentSortMode === 'created' ? (b.createdDate || b.date) : b.date; return new Date(dateB) - new Date(dateA); });
             loadProject(projects[0].id);
         } else {
             initializeEditorWithFiles({ 'index.html': '' }, ['index.html']);
@@ -1449,10 +1495,14 @@ if (isPreviewMode) {
         const output = [];
         const fileKeys = Object.keys(files).sort();
         
-        const indexHtmlPosition = fileKeys.indexOf('index.html');
-        if (indexHtmlPosition > -1) {
-            fileKeys.splice(indexHtmlPosition, 1);
-            fileKeys.unshift('index.html');
+        // FIX: Find index.html case-insensitively and move it to the front
+        const indexHtmlPath = fileKeys.find(key => key.toLowerCase() === 'index.html');
+        if (indexHtmlPath) {
+            const index = fileKeys.indexOf(indexHtmlPath);
+            if (index > -1) {
+                fileKeys.splice(index, 1);
+                fileKeys.unshift(indexHtmlPath);
+            }
         }
 
         for (const path of fileKeys) {
@@ -1504,10 +1554,14 @@ if (isPreviewMode) {
                 currentProjectId = null;
                 
                 const newOpenTabs = Object.keys(newFileSet);
-                const indexHtmlIdx = newOpenTabs.indexOf('index.html');
-                if (indexHtmlIdx > -1) {
-                    newOpenTabs.splice(indexHtmlIdx, 1);
-                    newOpenTabs.unshift('index.html');
+                // FIX: Find index.html case-insensitively and move it to the front
+                const indexHtmlPath = newOpenTabs.find(key => key.toLowerCase() === 'index.html');
+                if (indexHtmlPath) {
+                    const index = newOpenTabs.indexOf(indexHtmlPath);
+                    if (index > -1) {
+                        newOpenTabs.splice(index, 1);
+                        newOpenTabs.unshift(indexHtmlPath);
+                    }
                 }
 
                 initializeEditorWithFiles(newFileSet, newOpenTabs);
