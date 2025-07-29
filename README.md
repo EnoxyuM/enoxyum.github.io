@@ -39,7 +39,7 @@
 ## ✨ Features
 
 *   **Live code preview** You can toggle it in top left corner
-*   **Multi-File Support:** Work with `index.html`, `.js`, `.css` and other files
+*   **Multi-File Support:** Work with `index.html`, `.js`, `.css`, media and other files
 *   **Auto-Save** to your browser's IndexedDB. Create, load, rename, delete projects
 *   **Code Injection:** `//<<filename` It's like include, but better. Perfect for organizing
 *   **Console** that captures logs and errors from the live preview
@@ -51,7 +51,8 @@
 ## 🧪 Updates
 
 ~27.07.2025
-*   **Copy all files to clipboard button 📋** Perfect for sending to AI
+*   **Media Files support 🎵🖼🎬** img, audio, any binary files saved as archive in indexedDB
+*   **Copy all files to/from clipboard with buttons 📋/📜** Perfect for use with AI
 *   **Share as URL:** Share whole your project as URL link 🤯
 *   **Preview in new tab button** in top right corner and in ESC menu as URL link
 *   **Project sorting** by creation date and change date
