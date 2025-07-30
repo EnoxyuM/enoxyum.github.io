@@ -45,7 +45,7 @@
 *   **Multi-File Support:** Work with `index.html`, `.js`, `.css`, media🎵🖼 and other files
 *   **Projects saved** to your browser's IndexedDB. Create, load, rename, delete projects
 *   **Copy all files to/from clipboard with buttons 📋/📜** Perfect for use with AI
-*   **Code Injection:** `//<<filename` It's like include, but better. Perfect for organizing
+*   **Code Injection:** `//<<"file name"` It's like include, but better. Perfect for organizing
 *   **Console** that captures logs and errors from the live preview
 *   **Share as URL:** Share whole your project as URL link 🤯 or as URL for preview
 *   **Preview in new tab button** in top right corner. Let you preview without UI/HotKeys
@@ -61,9 +61,9 @@
 ### Code Injection
 
 ```javascript
-//<<FileName
+//<<"File Name"
 or
-//<<FolderName/FileName
+//<<"Folder Name/File Name"
 ```
 
 This feature literally lets you add content of any Tab into another. Using this you can easily break your code into small pices.
@@ -71,7 +71,7 @@ This feature literally lets you add content of any Tab into another. Using this 
 For example, create `some.js` file and paste here any function or variable from your main file:
 ```javascript
 // main.js
-//<<some.js
+//<<"some.js"
 console.log("yo " + x + Y);
 ```
 
