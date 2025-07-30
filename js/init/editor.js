@@ -20,6 +20,8 @@ function setupCodeMirror() {
         highlightSelectionMatches: {showToken: /\w/, annotateScrollbar: true}
     });
 
+    liveUpdateToggle.checked = localStorage.getItem('liveUpdateEnabled') !== 'false';
+
     const configureLiveUpdate = () => {
         editor.off("change", updateScene);
         if (liveUpdateToggle.checked) {

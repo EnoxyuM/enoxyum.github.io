@@ -39,7 +39,7 @@
 }
 
 .tab span {
-    padding: 8px 15px;
+    padding: 8px 15px 8px 1px;
     white-space: nowrap;
     overflow: hidden;
     -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);

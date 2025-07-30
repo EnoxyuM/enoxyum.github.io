@@ -1,9 +1,5 @@
 function setupEventListeners() {
     window.addEventListener('resize', checkOverflow);
-    
-    if (localStorage.getItem('liveUpdateEnabled') === 'false') {
-        liveUpdateToggle.checked = false;
-    }
 
     window.addEventListener('message', e => { 
         if (e.source === scene.contentWindow) { 
