@@ -37,7 +37,7 @@
 | **Right Click** | Context Menu(New file, New folder, Rename) |
 | **Drag and Drop** | any file/folder into another folder |
 
-*   **Click on "+"** or Drag and drop any file to upload it to project
+*   **RIGHT Click on "+"** or Drag and drop any file to upload it to project
 
 ## ✨ Features
 
