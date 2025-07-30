@@ -1,0 +1,82 @@
+#tabs-container {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    height: 35px;
+    position: absolute;
+    top: 5px;
+    left: calc(55px + 150px + 5px);
+    right: 115px;
+    transition: left 0.3s ease;
+}
+
+#tabs-wrapper {
+    display: flex;
+    align-items: flex-end;
+    min-width: 0; 
+    overflow: hidden;
+    flex: 0 0 auto; 
+}
+
+.tab {
+    display: flex; 
+    align-items: center;
+    justify-content: center;
+    background: #2d2d2d;
+    color: #ccc;
+    cursor: pointer;
+    border-radius: 12px;
+    margin-right: 2px;
+    min-width: 1px;
+    overflow: hidden;
+    flex-shrink: 0; 
+    width: 232px;
+    height: 35px;
+    box-sizing: border-box;
+    position: relative;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.tab span {
+    padding: 8px 15px;
+    white-space: nowrap;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
+    mask-image: linear-gradient(to right, black 85%, transparent 100%);
+}
+
+.tab.active {
+    background: #1e1e1e; 
+    color: #fff;
+    border-radius: 12px 12px 0 0; 
+    height: 35px;
+    border-bottom: none; 
+}
+
+.tab:not(.active):hover, #add-file-btn:hover { background: #4a4a4a; }
+.tab.dragging { opacity: 0.5; }
+
+#add-file-btn, #spacer { align-self: center; }
+
+#add-file-btn {
+    background: #2d2d2d;
+    color: #ccc;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 6px; 
+    font-weight: bold;
+    flex-shrink: 0;
+    margin-right: 2px;
+    height: 30px; 
+    box-sizing: border-box;
+}
+
+#spacer {
+    flex: 1 1 auto; 
+    min-width: 10px;
+}
+
+#tabs-container.tabs-overflow #spacer { display: none; }
+#tabs-container.tabs-overflow #tabs-wrapper { flex: 1 1 auto; }
+#tabs-container.tabs-overflow .tab { flex: 1 1 232px; width: auto; }
