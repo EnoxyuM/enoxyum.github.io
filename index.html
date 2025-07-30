@@ -6,7 +6,11 @@
     <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64x64.png">
     <meta charset="UTF-8">
     <title>CodiuM</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/header.css">
+    <link rel="stylesheet" href="css/tabs.css">
+    <link rel="stylesheet" href="css/panels.css">
+    <link rel="stylesheet" href="css/editor.css">
+    <link rel="stylesheet" href="css/modals.css">
     <script>
       if (location.hash === '#t' || location.hash.startsWith('#t=')) {
         document.write(`<style>
@@ -67,14 +71,31 @@
         <div class="color-item"><label for="Comment">Comment</label><input type="color" id="Comment"></div><div class="color-item"><label for="Keyword">Keyword</label><input type="color" id="Keyword"></div><div class="color-item"><label for="String">String</label><input type="color" id="String"></div><div class="color-item"><label for="Number">Number</label><input type="color" id="Number"></div><div class="color-item"><label for="Special">Special</label><input type="color" id="Special"></div><div class="color-item"><label for="Variable">Variable</label><input type="color" id="Variable"></div><div class="color-item"><label for="Property">Property</label><input type="color" id="Property"></div><div class="color-item"><label for="Definition">Definition</label><input type="color" id="Definition"></div><div class="color-item"><label for="Function">Function</label><input type="color" id="Function"></div><div class="color-item"><label for="Operator">Operator</label><input type="color" id="Operator"></div><div class="color-item"><label for="HTMLBracket">HTML Bracket</label><input type="color" id="HTMLBracket"></div><div class="color-item"><label for="HighlightedBracket">Highlighted Bracket</label><input type="color" id="HighlightedBracket"></div><div class="color-item"><label for="Class">Class</label><input type="color" id="Class"></div><div class="color-item"><label for="Regex">Regex</label><input type="color" id="Regex"></div><div class="color-item"><label for="HTMLTag">HTML Tag</label><input type="color" id="HTMLTag"></div><div class="color-item"><label for="HTMLAttribute">HTML Attribute</label><input type="color" id="HTMLAttribute"></div><div class="color-item"><label for="OtherText">OtherText</label><input type="color" id="OtherText"></div><button id="importBtn">Import</button><button id="exportBtn">Export</button>
     </div>
     <div id="notification"></div>
+    <div id="inline-input-container">
+        <input type="text" id="inline-input-field" spellcheck="false">
+    </div>
 
     <script src="js/state.js"></script>
     <script src="js/database.js"></script>
     <script src="js/sharing.js"></script>
-    <script src="js/ui.js"></script>
     <script src="js/preview.js"></script>
-    <script src="js/project.js"></script>
-    <script src="js/init.js"></script>
+    
+    <script src="js/project/export.js"></script>
+    <script src="js/project/persistence.js"></script>
+    <script src="js/project/core.js"></script>
 
+    <script src="js/ui/view.js"></script>
+    <script src="js/ui/theme.js"></script>
+    <script src="js/ui/tabs.js"></script>
+    <script src="js/ui/file-panel.js"></script>
+    <script src="js/ui/context-menu.js"></script>
+    <script src="js/ui/modals.js"></script>
+
+    <script src="js/init/editor.js"></script>
+    <script src="js/init/shortcuts.js"></script>
+    <script src="js/init/drag-drop.js"></script>
+    <script src="js/init/listeners.js"></script>
+    <script src="js/init/setup-preview.js"></script>
+    <script src="js/init/main.js"></script>
 </body>
 </html>

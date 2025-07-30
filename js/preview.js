@@ -119,7 +119,7 @@ function updateScene() {
                     const resolvedUrl = new URL(urlStr, baseOrigin + '/');
                     
                     if (resolvedUrl.origin === baseOrigin) {
-                        const path = resolvedUrl.pathname.substring(1); // Удаляем ведущий '/'
+                        const path = resolvedUrl.pathname.substring(1);
                         if (fileMap[path]) {
                            return path;
                         }

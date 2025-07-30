@@ -46,3 +46,68 @@ function getCodes() {
         r.onerror = e => rej('Error getting projects');
     });
 }
+
+function uploadFiles(fileList, basePath) {
+    const filesToProcess = Array.from(fileList);
+    let remaining = filesToProcess.length;
+    if (remaining === 0) return;
+
+    const onDone = () => {
+        renderAll();
+        if (liveUpdateToggle.checked) {
+            updateScene();
+        }
+        showNotification(`Finished uploading ${filesToProcess.length} file(s).`);
+    };
+
+    const TEXT_EXTENSIONS = new Set(['txt', 'js', 'json', 'html', 'htm', 'css', 'xml', 'svg', 'md', 'csv', 'log', 'ini', 'yaml', 'yml', 'toml', 'sh', 'bash', 'py', 'rb', 'php', 'java', 'c', 'cpp', 'h', 'hpp', 'cs', 'go', 'rs', 'ts', 'tsx', 'jsx']);
+
+    filesToProcess.forEach(file => {
+        const newPath = (basePath ? `${basePath}/${file.name}` : file.name).replace(/^\//, '');
+
+        if (files[newPath] && !confirm(`File "${newPath}" already exists. Overwrite?`)) {
+            remaining--;
+            if (remaining === 0) onDone();
+            return;
+        }
+
+        const reader = new FileReader();
+        const extension = file.name.split('.').pop().toLowerCase();
+        const isText = TEXT_EXTENSIONS.has(extension) || (file.type && file.type.startsWith('text/'));
+
+        reader.onload = e => {
+            if (isText) {
+                const code = e.target.result;
+                files[newPath] = {
+                    code: code,
+                    doc: CodeMirror.Doc(code, getModeForFilename(newPath)),
+                    isBinary: false
+                };
+                openFile(newPath);
+            } else {
+                const arrayBuffer = e.target.result;
+                const compressed = pako.gzip(new Uint8Array(arrayBuffer));
+                files[newPath] = {
+                    isBinary: true,
+                    mimeType: file.type || 'application/octet-stream',
+                    content: compressed,
+                };
+            }
+            remaining--;
+            if (remaining === 0) onDone();
+        };
+
+        reader.onerror = e => {
+            showNotification(`Error reading ${file.name}`);
+            console.error(e);
+            remaining--;
+            if (remaining === 0) onDone();
+        };
+
+        if (isText) {
+            reader.readAsText(file);
+        } else {
+            reader.readAsArrayBuffer(file);
+        }
+    });
+}
