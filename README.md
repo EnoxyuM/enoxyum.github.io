@@ -41,7 +41,7 @@
 
 ## ✨ Features
 
-*   **Live code preview** You can toggle it in top left corner
+*   **Full Screen Live Code Preview** You can toggle it in top left corner
 *   **Multi-File Support:** Work with `index.html`, `.js`, `.css`, media🎵🖼 and other files
 *   **Projects saved** to your browser's IndexedDB. Create, load, rename, delete projects
 *   **Copy all files to/from clipboard with buttons 📋/📜** Perfect for use with AI
