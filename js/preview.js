@@ -6,7 +6,7 @@ function getModeForFilename(filename) {
 }
 
 function resolveInjections(code, processingStack = new Set()) {
-    const injectionRegex = /\/\/\s*<<\s*([\w\d\._\/-]+)/g;
+    const injectionRegex = /\/\/\s*<<"([^"]+)"/g;
     return code.replace(injectionRegex, (match, path) => {
         const trimmedPath = path.trim();
         if (processingStack.has(trimmedPath)) {
