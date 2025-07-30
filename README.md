@@ -46,6 +46,7 @@
 *   **Projects saved** to your browser's IndexedDB. Create, load, rename, delete projects
 *   **Copy all files to/from clipboard with buttons 📋/📜** Perfect for use with AI
 *   **Code Injection:** `//<<"file name"` It's like include, but better. Perfect for organizing
+*   **Drag and Drop Code Injection:** select text in editor and drag it to tabs bar
 *   **Console** that captures logs and errors from the live preview
 *   **Share as URL:** Share whole your project as URL link 🤯 or as URL for preview
 *   **Preview in new tab button** in top right corner. Let you preview without UI/HotKeys
