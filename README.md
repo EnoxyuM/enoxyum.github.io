@@ -1,6 +1,6 @@
 <div align="center">
   <h1>
-    <a href="https://enoxyum.github.io/CodiuM/Index.html">CodiuM</a>
+    <a href="https://enoxyum.github.io/CodiuM/">CodiuM</a>
   </h1>
 </div>
 
@@ -35,29 +35,26 @@
 | **Left Click** | Open file in tab |
 | **Middle Click** | Delete file |
 | **Right Click** | Context Menu(New file, New folder, Rename) |
+| **Drag and Drop** | any file/folder into another folder |
+
+*   **Click on "+"** or Drag and drop any file to upload it to project
 
 ## ✨ Features
 
 *   **Live code preview** You can toggle it in top left corner
-*   **Multi-File Support:** Work with `index.html`, `.js`, `.css`, media and other files
-*   **Auto-Save** to your browser's IndexedDB. Create, load, rename, delete projects
+*   **Multi-File Support:** Work with `index.html`, `.js`, `.css`, media🎵🖼 and other files
+*   **Projects saved** to your browser's IndexedDB. Create, load, rename, delete projects
+*   **Copy all files to/from clipboard with buttons 📋/📜** Perfect for use with AI
 *   **Code Injection:** `//<<filename` It's like include, but better. Perfect for organizing
 *   **Console** that captures logs and errors from the live preview
-*   **Code Editor:** Syntax highlighting, bracket matching, selection highlighting, etc
-*   **Export** any single project or all your projects as a ZIP file
-*   **Other:** Change editor font size and even the editor's background opacity on the fly
-*   **Theme Customization:** It's in ESC Menu bottom right corner
-
-## 🧪 Updates
-
-~27.07.2025
-*   **Media Files support 🎵🖼🎬** img, audio, any binary files saved as archive in indexedDB
-*   **Copy all files to/from clipboard with buttons 📋/📜** Perfect for use with AI
-*   **Share as URL:** Share whole your project as URL link 🤯
-*   **Preview in new tab button** in top right corner and in ESC menu as URL link
+*   **Share as URL:** Share whole your project as URL link 🤯 or as URL for preview
+*   **Preview in new tab button** in top right corner. Let you preview without UI/HotKeys
+*   **Export/import** any single project or export all your projects as a ZIP file
 *   **Project sorting** by creation date and change date
 *   **Tabs rearrangement** by drag and drop like a browser tabs
-*   **Current project scroll saving.** Now you don't have to scroll back again😀
+*   **Code Editor:** Syntax highlighting, bracket matching, selection highlighting, etc
+*   **Other:** Change editor font size and even the editor's background opacity on the fly
+*   **Theme Customization:** It's in ESC Menu bottom right corner
 
 ##  Advanced Features
 
