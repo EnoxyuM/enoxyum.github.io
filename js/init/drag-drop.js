@@ -81,6 +81,54 @@ function setupDragDrop() {
     projectTitle.addEventListener('dragover', e => e.preventDefault());
     projectTitle.addEventListener('drop', e => handleFileDrop(e, null));
 
+    const editorWrapper = editor.getWrapperElement();
+    const fileTabs = document.getElementById('file-tabs');
+
+    editorWrapper.addEventListener('dragstart', (e) => {
+        if (editor.somethingSelected()) {
+            e.dataTransfer.setData('application/codemirror-selection', 'true');
+        }
+    });
+
+    fileTabs.addEventListener('dragover', (e) => {
+        if (e.dataTransfer.types.includes('application/codemirror-selection')) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+            fileTabs.classList.add('text-drag-over');
+        }
+    });
+
+    fileTabs.addEventListener('dragleave', (e) => {
+        if (!fileTabs.contains(e.relatedTarget)) {
+            fileTabs.classList.remove('text-drag-over');
+        }
+    });
+    
+    fileTabs.addEventListener('drop', (e) => {
+        fileTabs.classList.remove('text-drag-over');
+        if (e.dataTransfer.types.includes('application/codemirror-selection')) {
+            e.preventDefault();
+            const draggedText = e.dataTransfer.getData('text/plain');
+            if (!draggedText) return;
+
+            let i = 1;
+            let newFilename;
+            do {
+                newFilename = `inj${i}.js`;
+                i++;
+            } while (files[newFilename]);
+
+            files[newFilename] = {
+                code: draggedText,
+                doc: CodeMirror.Doc(draggedText, getModeForFilename(newFilename)),
+                isBinary: false
+            };
+
+            editor.replaceSelection(`//<<"${newFilename}"`);
+            openFile(newFilename);
+            showNotification(`Created and linked ${newFilename}`);
+        }
+    });
 
     async function collectFilesFromEntries(entries, path, fileList) {
         for (const entry of entries) {
@@ -162,7 +210,7 @@ function setupDragDrop() {
     window.addEventListener('dragover', e => e.preventDefault());
     window.addEventListener('drop', async e => {
         e.preventDefault();
-        if (e.target.closest('#menu') || e.target.closest('#file-panel') || e.target.closest('#project-title')) return;
+        if (e.target.closest('#menu') || e.target.closest('#file-panel') || e.target.closest('#project-title') || e.target.closest('#file-tabs')) return;
         
         if (!e.dataTransfer || !e.dataTransfer.items) return;
 

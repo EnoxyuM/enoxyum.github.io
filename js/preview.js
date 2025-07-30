@@ -14,18 +14,26 @@ function resolveInjections(code, processingStack = new Set()) {
             logToConsole('error', errorMsg);
             return `console.error(${JSON.stringify(errorMsg)});`;
         }
-        if (!files[trimmedPath]) {
-            const errorMsg = `Injection error: File "${trimmedPath}" not found.`;
-            logToConsole('error', errorMsg);
-            return `console.error(${JSON.stringify(errorMsg)});`;
+        const fileData = files[trimmedPath];
+        if (!fileData) {
+            return '';
         }
-        if (files[trimmedPath].isBinary) {
-            const errorMsg = `Injection error: Cannot inject binary file "${trimmedPath}" into a text file.`;
-            logToConsole('error', errorMsg);
-            return `console.error(${JSON.stringify(errorMsg)});`;
+
+        let injectedContent;
+        if (fileData.isBinary) {
+            try {
+                const decompressed = pako.ungzip(fileData.content);
+                injectedContent = new TextDecoder('utf-8', { fatal: false }).decode(decompressed);
+            } catch (e) {
+                const errorMsg = `Injection error processing binary file "${trimmedPath}": ${e.message}`;
+                logToConsole('error', errorMsg);
+                return `console.error(${JSON.stringify(errorMsg)});`;
+            }
+        } else {
+            injectedContent = fileData.code;
         }
+
         processingStack.add(trimmedPath);
-        const injectedContent = files[trimmedPath].code;
         const resolvedInjectedContent = resolveInjections(injectedContent, processingStack);
         processingStack.delete(trimmedPath);
         return resolvedInjectedContent;
@@ -57,13 +65,11 @@ function updateScene() {
             }
         } else {
             let content = fileData.code || '';
-            let mimeType = 'text/plain';
             const lowerPath = path.toLowerCase();
             
-            if (lowerPath.endsWith('.js') || lowerPath.endsWith('.html')) {
-                content = resolveInjections(content, new Set([path]));
-            }
+            content = resolveInjections(content, new Set([path]));
             
+            let mimeType = 'text/plain';
             if (lowerPath.endsWith('.js')) mimeType = 'application/javascript';
             else if (lowerPath.endsWith('.css')) mimeType = 'text/css';
             else if (lowerPath.endsWith('.html')) mimeType = 'text/html';
