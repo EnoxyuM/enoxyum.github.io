@@ -1,6 +1,6 @@
 <div align="center">
   <h1>
-    <a href="https://enoxyum.github.io/CodiuM/">CodiuM</a>
+    <a href="https://enoxyum.github.io">CodiuM</a>
   </h1>
 </div>
 
