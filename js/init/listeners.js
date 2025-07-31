@@ -7,6 +7,13 @@ function setupEventListeners() {
         } 
     });
     
+    window.addEventListener('paste', e => {
+        if (e.clipboardData && e.clipboardData.files.length > 0) {
+            e.preventDefault();
+            uploadFiles(e.clipboardData.files, '');
+        }
+    });
+
     window.addEventListener('beforeunload', e => e.stopImmediatePropagation());
 
     projectTitle.addEventListener('click', toggleFilePanel);

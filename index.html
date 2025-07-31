@@ -39,6 +39,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/addon/search/matchesonscrollbar.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.62.0/addon/mode/simple.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
 </head>
 <body>
     <label class="live-update-switch">
@@ -56,6 +58,11 @@
         <div id="copy-btn" title="Copy all files to clipboard">📋</div>
         <div id="paste-project-btn" title="Create project from clipboard">📜</div>
         <div id="run-btn" title="Save and Run in New Tab">▶</div>
+        <div id="drag-drop-overlay">
+            <div class="drop-zone" id="drop-zone-tag">Tag</div>
+            <div class="drop-zone" id="drop-zone-nothing">Nothing</div>
+            <div class="drop-zone" id="drop-zone-inject">Inject</div>
+        </div>
     </div>
 
     <div id="file-panel"></div>
@@ -77,6 +84,7 @@
 
     <script src="js/state.js"></script>
     <script src="js/database.js"></script>
+    <script src="js/gdrive.js"></script>
     <script src="js/sharing.js"></script>
     <script src="js/preview.js"></script>
     

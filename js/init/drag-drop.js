@@ -86,6 +86,7 @@ function setupDragDrop() {
 
     editorWrapper.addEventListener('dragstart', (e) => {
         if (editor.somethingSelected()) {
+            e.dataTransfer.setData('text/plain', editor.getSelection());
             e.dataTransfer.setData('application/codemirror-selection', 'true');
         }
     });
@@ -108,13 +109,14 @@ function setupDragDrop() {
         fileTabs.classList.remove('text-drag-over');
         if (e.dataTransfer.types.includes('application/codemirror-selection')) {
             e.preventDefault();
-            const draggedText = e.dataTransfer.getData('text/plain');
+            const draggedText = editor.getSelection();
             if (!draggedText) return;
 
+            // Common file creation logic
             let i = 1;
             let newFilename;
             do {
-                newFilename = `inj${i}.js`;
+                newFilename = `code${i}.js`;
                 i++;
             } while (files[newFilename]);
 
@@ -124,7 +126,33 @@ function setupDragDrop() {
                 isBinary: false
             };
 
-            editor.replaceSelection(`//<<"${newFilename}"`);
+            // Determine which zone was dropped on
+            const tabsRect = fileTabs.getBoundingClientRect();
+            const dropX = e.clientX - tabsRect.left;
+            const zoneWidth = tabsRect.width / 3;
+            
+            let dropAction = '';
+            if (dropX < zoneWidth) {
+                dropAction = 'tag';
+            } else if (dropX < zoneWidth * 2) {
+                dropAction = 'nothing';
+            } else {
+                dropAction = 'inject';
+            }
+            
+            // Perform action based on zone
+            switch(dropAction) {
+                case 'tag':
+                    editor.replaceSelection(`<script src="${newFilename}"></script>`);
+                    break;
+                case 'nothing':
+                    editor.replaceSelection('');
+                    break;
+                case 'inject':
+                    editor.replaceSelection(`//<<"${newFilename}"`);
+                    break;
+            }
+
             openFile(newFilename);
             showNotification(`Created and linked ${newFilename}`);
         }
@@ -158,32 +186,41 @@ function setupDragDrop() {
         
         const TEXT_EXTENSIONS = new Set(['txt', 'js', 'json', 'html', 'htm', 'css', 'xml', 'svg', 'md', 'csv', 'log', 'ini', 'yaml', 'yml', 'toml', 'sh', 'bash', 'py', 'rb', 'php', 'java', 'c', 'cpp', 'h', 'hpp', 'cs', 'go', 'rs', 'ts', 'tsx', 'jsx']);
 
-        for (const { file, path } of droppedFiles) {
-            const newPath = (path ? `${path}/${file.name}` : file.name).replace(/^\//, '');
+        for (const { file, path: basePath } of droppedFiles) {
+            let originalName = file.name;
+            let finalName = originalName;
+            let finalPath = (basePath ? `${basePath}/${finalName}` : finalName).replace(/^\//, '');
 
-            if (files[newPath] && !confirm(`File "${newPath}" already exists. Overwrite?`)) {
-                remaining--;
-                if (remaining === 0) onDone();
-                continue;
+            if (files[finalPath]) {
+                let counter = 1;
+                const nameParts = originalName.split('.');
+                const extension = nameParts.length > 1 ? '.' + nameParts.pop() : '';
+                const baseName = nameParts.join('.');
+                
+                do {
+                    finalName = `${baseName}(${counter})${extension}`;
+                    finalPath = (basePath ? `${basePath}/${finalName}` : finalName).replace(/^\//, '');
+                    counter++;
+                } while (files[finalPath]);
             }
 
             const reader = new FileReader();
-            const extension = file.name.split('.').pop().toLowerCase();
+            const extension = finalName.split('.').pop().toLowerCase();
             const isText = TEXT_EXTENSIONS.has(extension) || (file.type && file.type.startsWith('text/'));
 
             reader.onload = e => {
                 if (isText) {
                     const code = e.target.result;
-                    files[newPath] = {
+                    files[finalPath] = {
                         code: code,
-                        doc: CodeMirror.Doc(code, getModeForFilename(newPath)),
+                        doc: CodeMirror.Doc(code, getModeForFilename(finalPath)),
                         isBinary: false,
                     };
-                    openFile(newPath);
+                    openFile(finalPath);
                 } else {
                     const arrayBuffer = e.target.result;
                     const compressed = pako.gzip(new Uint8Array(arrayBuffer));
-                    files[newPath] = {
+                    files[finalPath] = {
                         isBinary: true,
                         mimeType: file.type || 'application/octet-stream',
                         content: compressed
@@ -193,7 +230,7 @@ function setupDragDrop() {
                 if (remaining === 0) onDone();
             };
             reader.onerror = e => {
-                showNotification(`Error reading ${file.name}`);
+                showNotification(`Error reading ${originalName}`);
                 console.error(e);
                 remaining--;
                 if (remaining === 0) onDone();
