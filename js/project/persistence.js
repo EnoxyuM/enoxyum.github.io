@@ -59,13 +59,11 @@ async function loadSavedCodes() {
         const dateB = currentSortMode === 'created' ? (b.createdDate || b.date) : b.date;
         return new Date(dateB) - new Date(dateA);
     });
-    menu.innerHTML = `<div id="menu-controls"><div id="menu-main-actions"><button id="saveBtn">New Project</button><button id="exportToggleBtn">Export Projects</button><button id="exportAllBtn">Export All</button><button id="syncGdriveToggleBtn">Sync to GDrive</button><button id="syncAllBtn">Sync All</button><button id="importProjectBtn">Import zip</button><button id="importFolderBtn">Import Folder</button><button id="shareUrlBtn">Share as URL</button><button id="sharePreviewBtn">Share as Preview</button><button id="sortBtn"></button><button id="colorThemeBtn">Color Theme</button></div><div id="fileInfo"></div></div><div id="project-list"></div>`;
+    menu.innerHTML = `<div id="menu-controls"><div id="menu-main-actions"><button id="saveBtn">New Project</button><button id="exportToggleBtn">Export Projects</button><button id="exportAllBtn">Export All</button><button id="importProjectBtn">Import zip</button><button id="importFolderBtn">Import Folder</button><button id="shareUrlBtn">Share as URL</button><button id="sharePreviewBtn">Share as Preview</button><button id="sortBtn"></button><button id="colorThemeBtn">Color Theme</button></div><div id="fileInfo"></div></div><div id="project-list"></div>`;
     const projectList = menu.querySelector('#project-list');
-    const syncAllBtn = menu.querySelector('#syncAllBtn');
 
     savedProjects.forEach(project => {
         const button = document.createElement('button');
-        button.classList.add(`synced-${!!project.syncedToGDrive}`);
 
         const textContainer = document.createElement('span');
         let innerHtml = '';
@@ -81,17 +79,7 @@ async function loadSavedCodes() {
         arrow.title = 'Export project as .zip';
         arrow.addEventListener('click', e => { e.stopPropagation(); exportProjectAsZip(project.id); e.currentTarget.classList.add('exported'); setTimeout(() => e.currentTarget.classList.remove('exported'), 300000); });
         
-        const syncArrow = document.createElement('span');
-        syncArrow.innerHTML = '⬆';
-        syncArrow.className = 'sync-arrow';
-        syncArrow.title = 'Sync project to GDrive';
-        syncArrow.addEventListener('click', e => { 
-            e.stopPropagation();
-            syncProjectToGDrive(project.id);
-        });
-
         button.appendChild(textContainer);
-        button.appendChild(syncArrow);
         button.appendChild(arrow);
         
         button.onclick = () => loadProject(project.id);
@@ -139,20 +127,8 @@ async function loadSavedCodes() {
     document.getElementById('saveBtn').onclick = () => saveCurrentCode(false);
     document.getElementById('exportToggleBtn').onclick = () => {
         projectList.classList.toggle('show-export-arrows');
-        if (projectList.classList.contains('show-sync-arrows')) {
-            projectList.classList.remove('show-sync-arrows');
-            syncAllBtn.style.display = 'none';
-        }
-    };
-    document.getElementById('syncGdriveToggleBtn').onclick = () => {
-        projectList.classList.toggle('show-sync-arrows');
-        syncAllBtn.style.display = projectList.classList.contains('show-sync-arrows') ? 'flex' : 'none';
-        if (projectList.classList.contains('show-export-arrows')) {
-            projectList.classList.remove('show-export-arrows');
-        }
     };
     document.getElementById('exportAllBtn').onclick = exportAllProjectsAsZip;
-    syncAllBtn.onclick = syncAllProjectsToGDrive;
     document.getElementById('importProjectBtn').onclick = importProject;
     document.getElementById('importFolderBtn').onclick = importProjectFolder;
     document.getElementById('shareUrlBtn').onclick = () => generateShareableUrl('#p=');
