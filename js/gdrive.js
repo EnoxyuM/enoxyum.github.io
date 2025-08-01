@@ -36,7 +36,6 @@ function trySilentLogin() {
         }
         showNotification('Successfully signed in to Google.');
     };
-    tokenClient.requestAccessToken({ prompt: 'none' });
 }
 
 function checkInitStatus() {

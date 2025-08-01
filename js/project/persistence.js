@@ -73,9 +73,6 @@ async function loadSavedCodes() {
             innerHtml += `<span class="name">${project.name}</span>`;
         }
         innerHtml += formatDate(new Date(project.date));
-        if (project.syncedToGDrive) {
-            innerHtml += `<span class="synced-icon">☁️</span>`;
-        }
         textContainer.innerHTML = innerHtml;
 
         const arrow = document.createElement('span');
