@@ -1,14 +1,13 @@
-const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest", "https://www.googleapis.com/discovery/v1/apis/picker/v1/rest"];
+const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
 const SCOPES = 'https://www.googleapis.com/auth/drive';
 
 let tokenClient;
 let gapiInited = false;
 let gisInited = false;
-let pickerApiLoaded = false;
-let gdriveFolderId = localStorage.getItem('gdrive_folder_id');
+let gdriveFolderId = null;
 
 function gapiLoaded() {
-    gapi.load('client:picker', initializeGapiClient);
+    gapi.load('client', initializeGapiClient);
 }
 
 async function initializeGapiClient() {
@@ -30,12 +29,23 @@ function gisLoaded() {
     checkInitStatus();
 }
 
+function trySilentLogin() {
+    tokenClient.callback = async (resp) => {
+        if (resp.error !== undefined) {
+            return;
+        }
+        showNotification('Successfully signed in to Google.');
+    };
+    tokenClient.requestAccessToken({ prompt: 'none' });
+}
+
 function checkInitStatus() {
     if (gapiInited && gisInited) {
         const gdriveAuthBtn = document.getElementById('gdriveAuthBtn');
         if (gdriveAuthBtn) {
             gdriveAuthBtn.disabled = false;
         }
+        trySilentLogin();
     }
 }
 
@@ -58,43 +68,55 @@ function handleAuthClick() {
 function handleSignoutClick() {
     const token = gapi.client.getToken();
     if (token !== null) {
-        google.accounts.oauth2.revoke(token.access_token);
-        gapi.client.setToken('');
-        localStorage.removeItem('gdrive_folder_id');
-        gdriveFolderId = null;
-        showNotification('Successfully signed out.');
+        google.accounts.oauth2.revoke(token.access_token, () => {
+            gapi.client.setToken('');
+            localStorage.removeItem('codium_gdrive_folder_id');
+            gdriveFolderId = null;
+            showNotification('Successfully signed out.');
+        });
     }
 }
 
-async function selectGDriveFolder() {
-    return new Promise((resolve, reject) => {
-        const view = new google.picker.View(google.picker.ViewId.FOLDERS)
-            .setMimeTypes('application/vnd.google-apps.folder');
+async function getOrCreateCodiuMFolderId() {
+    if (gdriveFolderId) {
+        return gdriveFolderId;
+    }
+    
+    const storedFolderId = localStorage.getItem('codium_gdrive_folder_id');
+    if(storedFolderId) {
+        gdriveFolderId = storedFolderId;
+        return gdriveFolderId;
+    }
 
-        const picker = new google.picker.PickerBuilder()
-            .setAppId(CLIENT_ID.split('-')[0])
-            .setOAuthToken(gapi.client.getToken().access_token)
-            .addView(view)
-            .setDeveloperKey(API_KEY)
-            .setCallback(data => {
-                if (data.action === google.picker.Action.PICKED) {
-                    const selectedItem = data.docs[0];
-                    if (selectedItem.mimeType === 'application/vnd.google-apps.folder') {
-                        gdriveFolderId = selectedItem.id;
-                        localStorage.setItem('gdrive_folder_id', gdriveFolderId);
-                        showNotification(`Selected folder: ${selectedItem.name}`);
-                        resolve(gdriveFolderId);
-                    } else {
-                        showNotification('Please select a folder, not a file.');
-                        reject('Selected item is not a folder');
-                    }
-                } else if (data.action === google.picker.Action.CANCEL) {
-                    reject('Picker was cancelled');
-                }
-            })
-            .build();
-        picker.setVisible(true);
-    });
+    try {
+        const response = await gapi.client.drive.files.list({
+            q: "mimeType='application/vnd.google-apps.folder' and name='CodiuM' and trashed=false",
+            fields: 'files(id, name)',
+            spaces: 'drive'
+        });
+
+        if (response.result.files && response.result.files.length > 0) {
+            gdriveFolderId = response.result.files[0].id;
+            localStorage.setItem('codium_gdrive_folder_id', gdriveFolderId);
+            return gdriveFolderId;
+        } else {
+            const createResponse = await gapi.client.drive.files.create({
+                resource: {
+                    'name': 'CodiuM',
+                    'mimeType': 'application/vnd.google-apps.folder'
+                },
+                fields: 'id'
+            });
+            gdriveFolderId = createResponse.result.id;
+            localStorage.setItem('codium_gdrive_folder_id', gdriveFolderId);
+            showNotification('Created "CodiuM" folder in Google Drive.');
+            return gdriveFolderId;
+        }
+    } catch (err) {
+        console.error('Error finding or creating CodiuM folder', err);
+        showNotification(`Error accessing Drive folder: ${err.result.error.message}`);
+        return null;
+    }
 }
 
 async function syncProjectToGDrive(projectId) {
@@ -103,14 +125,11 @@ async function syncProjectToGDrive(projectId) {
         handleAuthClick();
         return;
     }
-    if (!gdriveFolderId) {
-        showNotification('Please select a Google Drive folder to sync to.');
-        try {
-            await selectGDriveFolder();
-        } catch (error) {
-            showNotification('Sync cancelled: Folder selection is required.');
-            return;
-        }
+
+    const folderId = await getOrCreateCodiuMFolderId();
+    if (!folderId) {
+        showNotification('Could not get or create Google Drive folder. Sync cancelled.');
+        return;
     }
 
     const project = await new Promise((resolve, reject) => {
@@ -141,7 +160,7 @@ async function syncProjectToGDrive(projectId) {
     const metadata = {
         name: projectName,
         mimeType: 'application/zip',
-        parents: [gdriveFolderId]
+        parents: [folderId]
     };
     
     const form = new FormData();
@@ -178,14 +197,11 @@ async function syncAllProjectsToGDrive() {
         handleAuthClick();
         return;
     }
-    if (!gdriveFolderId) {
-        showNotification('Please select a root folder first.');
-        try {
-            await selectGDriveFolder();
-        } catch (error) {
-            showNotification('Sync cancelled: Folder selection is required.');
-            return;
-        }
+    
+    const folderId = await getOrCreateCodiuMFolderId();
+    if (!folderId) {
+        showNotification('Could not get or create Google Drive folder. Sync cancelled.');
+        return;
     }
 
     const allProjects = await getCodes();
