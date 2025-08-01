@@ -24,7 +24,7 @@ function gisLoaded() {
     tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
-        callback: '', // определяется динамически
+        callback: '',
     });
     gisInited = true;
     checkInitStatus();
@@ -78,11 +78,16 @@ async function selectGDriveFolder() {
             .setDeveloperKey(API_KEY)
             .setCallback(data => {
                 if (data.action === google.picker.Action.PICKED) {
-                    const folder = data.docs[0];
-                    gdriveFolderId = folder.id;
-                    localStorage.setItem('gdrive_folder_id', gdriveFolderId);
-                    showNotification(`Selected folder: ${folder.name}`);
-                    resolve(gdriveFolderId);
+                    const selectedItem = data.docs[0];
+                    if (selectedItem.mimeType === 'application/vnd.google-apps.folder') {
+                        gdriveFolderId = selectedItem.id;
+                        localStorage.setItem('gdrive_folder_id', gdriveFolderId);
+                        showNotification(`Selected folder: ${selectedItem.name}`);
+                        resolve(gdriveFolderId);
+                    } else {
+                        showNotification('Please select a folder, not a file.');
+                        reject('Selected item is not a folder');
+                    }
                 } else if (data.action === google.picker.Action.CANCEL) {
                     reject('Picker was cancelled');
                 }
@@ -173,7 +178,7 @@ async function syncAllProjectsToGDrive() {
         handleAuthClick();
         return;
     }
-     if (!gdriveFolderId) {
+    if (!gdriveFolderId) {
         showNotification('Please select a root folder first.');
         try {
             await selectGDriveFolder();
