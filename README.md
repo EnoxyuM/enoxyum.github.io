@@ -15,6 +15,7 @@
 | `Ctrl` + `S` | Save current project |
 | `Ctrl` + `Mouse Wheel` | Increase/decrease the editor's font size |
 | `Shift` + `Mouse Wheel` | Increase/decrease the editor's background opacity |
+| `Ctrl` + `V` (When file in buffer) | Paste file in file panel |
 
 ### File Tabs
 | Action | Description |
