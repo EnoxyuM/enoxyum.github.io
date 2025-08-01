@@ -45,8 +45,6 @@ function handleAuthClick() {
             showNotification('GAuth Error: ' + resp.error);
             throw (resp);
         }
-        document.getElementById('gdriveAuthBtn').textContent = 'Sign Out';
-        document.getElementById('gdriveAuthBtn').onclick = handleSignoutClick;
         showNotification('Successfully signed in to Google.');
     };
 
@@ -64,8 +62,6 @@ function handleSignoutClick() {
         gapi.client.setToken('');
         localStorage.removeItem('gdrive_folder_id');
         gdriveFolderId = null;
-        document.getElementById('gdriveAuthBtn').textContent = 'Sign in to GDrive';
-        document.getElementById('gdriveAuthBtn').onclick = handleAuthClick;
         showNotification('Successfully signed out.');
     }
 }

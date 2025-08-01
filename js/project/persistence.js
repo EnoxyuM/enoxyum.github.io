@@ -59,7 +59,7 @@ async function loadSavedCodes() {
         const dateB = currentSortMode === 'created' ? (b.createdDate || b.date) : b.date;
         return new Date(dateB) - new Date(dateA);
     });
-    menu.innerHTML = `<div id="menu-controls"><div id="menu-main-actions"><button id="saveBtn">New Project</button><button id="exportToggleBtn">Export Projects</button><button id="exportAllBtn">Export All</button><button id="syncGdriveToggleBtn">Sync to GDrive</button><button id="syncAllBtn">Sync All</button><button id="importProjectBtn">Import zip</button><button id="importFolderBtn">Import Folder</button><button id="shareUrlBtn">Share as URL</button><button id="sharePreviewBtn">Share as Preview</button><button id="sortBtn"></button><button id="colorThemeBtn">Color Theme</button><button id="gdriveAuthBtn" disabled>Sign in to GDrive</button></div><div id="fileInfo"></div></div><div id="project-list"></div>`;
+    menu.innerHTML = `<div id="menu-controls"><div id="menu-main-actions"><button id="saveBtn">New Project</button><button id="exportToggleBtn">Export Projects</button><button id="exportAllBtn">Export All</button><button id="syncGdriveToggleBtn">Sync to GDrive</button><button id="syncAllBtn">Sync All</button><button id="importProjectBtn">Import zip</button><button id="importFolderBtn">Import Folder</button><button id="shareUrlBtn">Share as URL</button><button id="sharePreviewBtn">Share as Preview</button><button id="sortBtn"></button><button id="colorThemeBtn">Color Theme</button></div><div id="fileInfo"></div></div><div id="project-list"></div>`;
     const projectList = menu.querySelector('#project-list');
     const syncAllBtn = menu.querySelector('#syncAllBtn');
 
@@ -156,7 +156,6 @@ async function loadSavedCodes() {
     };
     document.getElementById('exportAllBtn').onclick = exportAllProjectsAsZip;
     syncAllBtn.onclick = syncAllProjectsToGDrive;
-    document.getElementById('gdriveAuthBtn').onclick = handleAuthClick;
     document.getElementById('importProjectBtn').onclick = importProject;
     document.getElementById('importFolderBtn').onclick = importProjectFolder;
     document.getElementById('shareUrlBtn').onclick = () => generateShareableUrl('#p=');
