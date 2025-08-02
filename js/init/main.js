@@ -13,6 +13,7 @@ if (!isPreviewMode) {
     showingEditor = true;
 
     openDB().then(async () => {
+        loadBasket();
         if (await loadFromUrlHash()) {
             loadColors();
             return;

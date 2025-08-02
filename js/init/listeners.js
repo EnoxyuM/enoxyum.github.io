@@ -42,16 +42,27 @@ function setupEventListeners() {
             showNotification("Cannot delete index.html");
             return;
         }
+
         if (isFolder) {
+            const folderContents = {};
             const keysToDelete = Object.keys(files).filter(path => path.startsWith(pathToDelete + '/'));
+            keysToDelete.forEach(path => {
+                const { doc, ...rest } = files[path];
+                folderContents[path] = rest;
+            });
+            basket.push({ type: 'folder', path: pathToDelete, files: folderContents });
+
             keysToDelete.forEach(path => {
                 closeTab(path);
                 delete files[path];
             });
         } else {
+            const { doc, ...rest } = files[pathToDelete];
+            basket.push({ type: 'file', path: pathToDelete, data: rest });
             closeTab(pathToDelete);
             delete files[pathToDelete];
         }
+        saveBasket();
         renderAll();
     });
 

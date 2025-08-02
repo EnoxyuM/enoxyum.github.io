@@ -28,6 +28,7 @@ let currentProjectId = null;
 let currentSortMode = localStorage.getItem('projectSortMode') || 'created';
 const blobUrls = [];
 let db;
+let basket = [];
 
 const DB_NAME = 'CodeEditorDB_Projects', DB_VERSION = 1, STORE_NAME = 'projects';
 
