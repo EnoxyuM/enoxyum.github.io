@@ -1,0 +1,119 @@
+#file-panel {
+    position: absolute;
+    top: 40px;
+    left: -250px;
+    width: 250px;
+    height: calc(100% - 40px);
+    background: #252526;
+    z-index: 15;
+    transition: left 0.3s ease;
+    overflow-y: auto;
+    border-right: 1px solid #3c3c3c;
+    padding: 5px 0;
+    box-sizing: border-box;
+}
+#file-panel.open { left: 0; }
+
+.file-entry { padding: 4px 10px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; user-select: none; }
+.file-entry:hover { background-color: #3a4a5a; }
+.file-entry.file.is-open { background-color: #353537; }
+.file-entry.file.is-open:hover { background-color: #3a4a5a; }
+.file-entry.file.active { background-color: #094771; }
+.file-entry.file.active:hover { background-color: #105781; }
+
+.folder-content {
+    display: none;
+}
+
+.folder-toggle-icon {
+    display: inline-block;
+    width: 1em;
+}
+
+#context-menu {
+    position: fixed;
+    z-index: 10000;
+    background: #2c2c2c;
+    border: 1px solid #444;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    padding: 5px 0;
+    display: none;
+}
+#context-menu div {
+    padding: 8px 15px;
+    cursor: pointer;
+    color: #ccc;
+}
+#context-menu div:hover {
+    background: #094771;
+    color: #fff;
+}
+
+#console { top: auto; height: 30%; bottom: 0; background-color: rgba(0, 0, 0, 0.8); color: #fff; overflow-y: auto; display: none; z-index: 20; padding: 10px; box-sizing: border-box; font-family: monospace; width: 100%; }
+.error { color: #ff6b6b; }
+.log { color: #4ecdc4; }
+
+#project-list,
+#file-panel {
+    scrollbar-width: thin;
+    scrollbar-color: #555 transparent;
+}
+
+#project-list::-webkit-scrollbar,
+#file-panel::-webkit-scrollbar {
+    width: 14px;
+}
+
+#project-list::-webkit-scrollbar-track,
+#file-panel::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#project-list::-webkit-scrollbar-thumb,
+#file-panel::-webkit-scrollbar-thumb {
+    background-color: #555;
+    border-radius: 7px;
+}
+
+#project-list::-webkit-scrollbar-thumb:hover,
+#file-panel::-webkit-scrollbar-thumb:hover {
+    background-color: #777;
+}
+
+#project-list::-webkit-scrollbar-thumb { border: 3px solid rgba(30, 30, 30, 0.95); }
+#file-panel::-webkit-scrollbar-thumb { border: 3px solid #252526; }
+
+#project-list::-webkit-scrollbar-button:single-button,
+#file-panel::-webkit-scrollbar-button:single-button {
+    background-color: transparent;
+    display: block;
+    border-style: solid;
+    height: 10px;
+    width: 14px;
+}
+
+#project-list::-webkit-scrollbar-button:single-button:hover,
+#file-panel::-webkit-scrollbar-button:single-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+#project-list::-webkit-scrollbar-button:single-button:vertical:decrement,
+#file-panel::-webkit-scrollbar-button:single-button:vertical:decrement {
+    border-width: 0 5px 5px 5px;
+    border-color: transparent transparent #999 transparent;
+}
+
+#project-list::-webkit-scrollbar-button:single-button:vertical:increment,
+#file-panel::-webkit-scrollbar-button:single-button:vertical:increment {
+    border-width: 5px 5px 0 5px;
+    border-color: #999 transparent transparent transparent;
+}
+
+.file-entry.drag-over {
+    background-color: #094771;
+}
+
+.file-entry.dragging {
+    opacity: 0.5;
+}
