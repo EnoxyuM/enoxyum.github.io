@@ -28,14 +28,14 @@
 | Action | Description |
 | :--- | :--- |
 | **Left Click** | Load project |
-| **Middle Click** | Delete project |
+| **Middle Click** | Move project to Basket |
 | **Right Click** | Rename project |
 
 ### Project files Menu (Click on 📁Project name to open)
 | Action | Description |
 | :--- | :--- |
 | **Left Click** | Open file in tab |
-| **Middle Click** | Delete file |
+| **Middle Click** | Move file to Basket |
 | **Right Click** | Context Menu(New file, New folder, Rename) |
 | **Drag and Drop** | any file/folder into another folder |
 
@@ -43,21 +43,22 @@
 
 ## ✨ Features
 
-*   **Full Screen Live Code Preview** You can toggle it in top left corner
-*   **Multi-File Support:** Work with `index.html`, `.js`, `.css`, media🎵🖼 and other files
-*   **Projects saved** to your browser's IndexedDB. Create, load, rename, delete projects
-*   **Copy all files to/from clipboard with buttons 📋/📜** Perfect for use with AI
-*   **Code Injection:** `//<<"file name"` or drag text to tabs. It's like include, but better.
-*   **Drag and Drop Code Injection:** select text in editor and drag it to tabs bar
-*   **Console** that captures logs and errors from the live preview
-*   **Share as URL:** Share whole your project as URL link 🤯 or as URL for preview
-*   **Preview in new tab button** in top right corner. Let you preview without UI/HotKeys
-*   **Export/import** any single project or export all your projects as a ZIP file
-*   **Project sorting** by creation date and change date
-*   **Tabs rearrangement** by drag and drop like a browser tabs
-*   **Code Editor:** Syntax highlighting, bracket matching, selection highlighting, etc
-*   **Other:** Change editor font size and even the editor's background opacity on the fly
-*   **Theme Customization:** It's in ESC Menu bottom right corner
+*   **👓Full Screen Live Code Preview** You can toggle it in top left corner
+*   **🎵🖼Multi-File Support:** Work with `index.html`, `.js`, `.css`, media and other files
+*   **💾Projects saved** to your browser's IndexedDB. Create, load, rename, delete projects
+*   **📋/📜Copy all files to/from clipboard(top right buttons)** Perfect for use with AI
+*   **💉Code Injection:** `//<<"file name"` or drag text to tabs. It's like include, but better.
+*   **📲Drag and Drop Code Injection:** select text in editor and drag it to tabs bar
+*   **📟Console** that captures logs and errors from the live preview
+*   **🔗Share as URL:** Share whole your project as URL link or as URL for preview
+*   **▶Preview in new tab button** in top right corner. Let you preview without UI/HotKeys
+*   **💱Export/import** any single project or export all your projects as a ZIP file
+*   **🆎Project sorting** by creation date and change date
+*   **🛸Tabs rearrangement** by drag and drop like a browser tabs
+*   **🚀Code Editor:** Syntax highlighting, bracket matching, selection highlighting, etc
+*   **🚽Basket:** Middle click on it to delete foreva or click to restore
+*   **🎠Other:** Change editor font size and even the editor's background opacity on the fly
+*   **🌈Theme Customization:** It's in ESC Menu bottom right corner
 
 ##  Advanced Features
 
