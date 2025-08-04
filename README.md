@@ -47,7 +47,7 @@
 *   **Multi-File Support:** Work with `index.html`, `.js`, `.css`, media🎵🖼 and other files
 *   **Projects saved** to your browser's IndexedDB. Create, load, rename, delete projects
 *   **Copy all files to/from clipboard with buttons 📋/📜** Perfect for use with AI
-*   **Code Injection:** `//<<"file name"` It's like include, but better. Perfect for organizing
+*   **Code Injection:** `//<<"file name"` or drag text to tabs. It's like include, but better.
 *   **Drag and Drop Code Injection:** select text in editor and drag it to tabs bar
 *   **Console** that captures logs and errors from the live preview
 *   **Share as URL:** Share whole your project as URL link 🤯 or as URL for preview
