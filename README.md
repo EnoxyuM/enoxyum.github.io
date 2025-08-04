@@ -22,6 +22,7 @@
 | :--- | :--- |
 | **Middle Click** | Close tab |
 | **Right Click** | Rename file |
+| **Drag selected text to tabs** | Create file with this text and inject or tag |
 
 ### Project Menu (ESC)
 | Action | Description |
