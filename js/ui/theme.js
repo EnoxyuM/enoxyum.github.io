@@ -1,8 +1,17 @@
-const colorTypes = { Comment: 'comment', Keyword: 'keyword', String: 'string', Number: 'number', Special: 'atom', Variable: 'variable', Property: 'property', Definition: 'def', Function: 'variable-2', Operator: 'operator', HTMLBracket: 'bracket', HighlightedBracket: 'matchingbracket', Class: 'variable-3', Regex: 'string-2', HTMLTag: 'tag', HTMLAttribute: 'attribute', OtherText: 'text' };
-const defaultColors = {"Comment":"#04ff00","Keyword":"#0064ff","String":"#ffff00","Number":"#ffffff","Special":"#ff00ae","Variable":"#c880ff","Property":"#757ad7","Definition":"#ff8000","Function":"#00b3ff","Operator":"#ffffff","HTMLBracket":"#fe2aec","HighlightedBracket":"#ff0000","Class":"#00ff88","Regex":"#ff00ff","HTMLTag":"#00b3ff","HTMLAttribute":"#ff7aff","OtherText":"#878787"};
+const colorTypes = { Background: 'background', Comment: 'comment', Keyword: 'keyword', String: 'string', Number: 'number', Special: 'atom', Variable: 'variable', Property: 'property', Definition: 'def', Function: 'variable-2', Operator: 'operator', HTMLBracket: 'bracket', HighlightedBracket: 'matchingbracket', Class: 'variable-3', Regex: 'string-2', HTMLTag: 'tag', HTMLAttribute: 'attribute', OtherText: 'text' };
+const defaultColors = {"Background":"#1e1e1f","Comment":"#04ff00","Keyword":"#0064ff","String":"#ffff00","Number":"#ffffff","Special":"#ff00ae","Variable":"#c880ff","Property":"#757ad7","Definition":"#ff8000","Function":"#00b3ff","Operator":"#ffffff","HTMLBracket":"#fe2aec","HighlightedBracket":"#ff0000","Class":"#00ff88","Regex":"#ff00ff","HTMLTag":"#00b3ff","HTMLAttribute":"#ff7aff","OtherText":"#bababa"};
 
 function changeColor(type) { 
     const color = document.getElementById(type).value; 
+    localStorage.setItem(`color-${type}`, color);
+
+    if (type === 'Background') {
+        if (window.updateEditorBackground) {
+            window.updateEditorBackground();
+        }
+        return;
+    }
+    
     const style = document.createElement('style'); 
     document.head.appendChild(style); 
     const sheet = style.sheet; 
@@ -13,7 +22,6 @@ function changeColor(type) {
     } else {
         sheet.insertRule(`.cm-s-monokai span.cm-${colorTypes[type]} { color: ${color} !important; }`, 0); 
     }
-    localStorage.setItem(`color-${type}`, color); 
 }
 
 function loadColors() { 
@@ -29,7 +37,7 @@ function loadColors() {
 function exportSettings() { 
     const settings = {}; 
     for (const type in colorTypes) {
-        settings[type] = localStorage.getItem(`color-${type}`);
+        settings[type] = localStorage.getItem(`color-${type}`) || defaultColors[type];
     }
     const a = document.createElement('a'); 
     a.href = URL.createObjectURL(new Blob([JSON.stringify(settings)], {type: "application/json"})); 
