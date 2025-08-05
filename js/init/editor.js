@@ -20,6 +20,8 @@ function setupCodeMirror() {
         highlightSelectionMatches: {showToken: /\w/, annotateScrollbar: true}
     });
 
+    const cmWrapper = editor.getWrapperElement();
+
     liveUpdateToggle.checked = localStorage.getItem('liveUpdateEnabled') !== 'false';
 
     const configureLiveUpdate = () => {
@@ -39,23 +41,25 @@ function setupCodeMirror() {
     });
 
     let fontSize = 14; 
-    editorElement.addEventListener('wheel', e => { 
+    cmWrapper.addEventListener('wheel', e => { 
         if (e.ctrlKey) { 
             e.preventDefault(); 
             fontSize += e.deltaY > 0 ? -1 : 1; 
             fontSize = Math.max(8, Math.min(24, fontSize)); 
-            editorElement.style.fontSize = fontSize + 'px'; 
+            cmWrapper.style.fontSize = fontSize + 'px'; 
             editor.refresh(); 
         } 
     });
 
     let opacity = 0.9;
-    editorElement.addEventListener('wheel', e => {
-        if (e.shiftKey) {
-            e.preventDefault();
-            opacity += e.deltaY > 0 ? -0.05 : 0.05;
-            opacity = Math.max(0.1, Math.min(1, opacity));
-            editorElement.style.backgroundColor = `rgba(30, 30, 30, ${opacity})`;
-        }
+    cmWrapper.style.backgroundColor = `rgba(39, 40, 34, ${opacity})`;
+
+    cmWrapper.addEventListener('wheel', e => { 
+        if (e.shiftKey) { 
+            e.preventDefault(); 
+            opacity += e.deltaY > 0 ? -0.05 : 0.05; 
+            opacity = Math.max(0.1, Math.min(1, opacity)); 
+            cmWrapper.style.backgroundColor = `rgba(39, 40, 34, ${opacity})`; 
+        } 
     });
 }
