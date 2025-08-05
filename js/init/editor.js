@@ -49,13 +49,13 @@ function setupCodeMirror() {
         } 
     });
 
-    let opacity = 0.5; 
-    editorElement.addEventListener('wheel', e => { 
-        if (e.shiftKey) { 
-            e.preventDefault(); 
-            opacity += e.deltaY > 0 ? -0.05 : 0.05; 
-            opacity = Math.max(0.1, Math.min(1, opacity)); 
-            editorElement.style.backgroundColor = `rgba(30, 30, 30, ${opacity})`; 
-        } 
+    let opacity = 0.9;
+    editorElement.addEventListener('wheel', e => {
+        if (e.shiftKey) {
+            e.preventDefault();
+            opacity += e.deltaY > 0 ? -0.05 : 0.05;
+            opacity = Math.max(0.1, Math.min(1, opacity));
+            editorElement.style.backgroundColor = `rgba(30, 30, 30, ${opacity})`;
+        }
     });
 }
