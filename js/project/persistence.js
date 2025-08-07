@@ -124,6 +124,23 @@ async function restoreItem(index) {
     showNotification(`Restored ${item.type} '${itemName}'.`);
 }
 
+async function saveActiveTab() {
+    if (currentProjectId === null || !db) {
+        return;
+    }
+
+    const tx = db.transaction([STORE_NAME], 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const getReq = store.get(currentProjectId);
+
+    getReq.onsuccess = e => {
+        const project = e.target.result;
+        if (project && project.lastActiveFile !== activeFilePath) {
+            project.lastActiveFile = activeFilePath;
+            updateCode(project).catch(err => console.error("Failed to save active tab state:", err));
+        }
+    };
+}
 
 async function saveCurrentCode(overwrite = false) {
     if (activeFilePath && files[activeFilePath] && !files[activeFilePath].isBinary) {
@@ -156,6 +173,7 @@ async function saveCurrentCode(overwrite = false) {
             if (project) {
                 project.files = filesToSave;
                 project.openTabs = openTabs;
+                project.lastActiveFile = activeFilePath;
                 project.date = now;
                 updateCode(project).then(loadSavedCodes);
                 localStorage.setItem('lastOpenedProjectId', currentProjectId);
@@ -169,6 +187,7 @@ async function saveCurrentCode(overwrite = false) {
             createdDate: now,
             files: filesToSave,
             openTabs: openTabs,
+            lastActiveFile: activeFilePath,
             name: name
         };
         const id = await saveCode(newProject);
@@ -248,7 +267,7 @@ async function loadSavedCodes() {
                 deleteCode(project.id).then(() => {
                     if (currentProjectId === project.id) {
                         currentProjectId = null;
-                        initializeEditorWithFiles({ 'index.html': { code: '', isBinary: false } }, ['index.html']);
+                        initializeEditorWithFiles({ 'index.html': { code: '', isBinary: false } }, ['index.html'], null);
                         updateProjectTitle();
                     }
                     saveBasket();

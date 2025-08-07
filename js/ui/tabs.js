@@ -71,6 +71,7 @@ function switchTab(filepath) {
     }
 
     activeFilePath = filepath;
+    saveActiveTab();
 
     updateEditorView(filepath);
 

@@ -145,7 +145,7 @@ function setupEventListeners() {
                         newOpenTabs.unshift(indexHtmlPath);
                     }
                 }
-                initializeEditorWithFiles(newFileSet, newOpenTabs);
+                initializeEditorWithFiles(newFileSet, newOpenTabs, null);
                 updateProjectTitle();
                 showNotification('Project loaded');
             } catch (err) {

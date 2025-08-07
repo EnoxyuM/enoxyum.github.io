@@ -195,7 +195,7 @@ async function handleProjectImport(event) {
         if (indexHtmlPath) {
             openTabsOnLoad.push(indexHtmlPath);
         }
-        initializeEditorWithFiles(newFileSet, openTabsOnLoad);
+        initializeEditorWithFiles(newFileSet, openTabsOnLoad, null);
         updateProjectTitle();
         toggleMenu();
     }
@@ -270,7 +270,7 @@ async function handleFolderImport(event) {
         if (indexHtmlPath) {
             openTabsOnLoad.push(indexHtmlPath);
         }
-        initializeEditorWithFiles(newFileSet, openTabsOnLoad);
+        initializeEditorWithFiles(newFileSet, openTabsOnLoad, null);
         updateProjectTitle();
         toggleMenu();
     }

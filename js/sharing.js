@@ -162,7 +162,7 @@ async function loadFromUrlHash() {
                     newOpenTabs.unshift(indexHtmlPath);
                 }
             }
-            initializeEditorWithFiles(filesToLoad, newOpenTabs);
+            initializeEditorWithFiles(filesToLoad, newOpenTabs, null);
             currentProjectId = null;
             updateProjectTitle();
             history.replaceState(null, '', location.pathname + location.search);

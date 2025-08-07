@@ -1,4 +1,4 @@
-function initializeEditorWithFiles(fileSet, loadedOpenTabs) {
+function initializeEditorWithFiles(fileSet, loadedOpenTabs, lastActiveFile) {
     files = {};
     for (const filepath in fileSet) {
         const fileData = fileSet[filepath];
@@ -15,15 +15,19 @@ function initializeEditorWithFiles(fileSet, loadedOpenTabs) {
     const fileKeys = Object.keys(files);
     const indexHtmlPath = fileKeys.find(key => key.toLowerCase() === 'index.html');
 
-    if (openTabs.length === 0 && indexHtmlPath) {
-        openTabs.push(indexHtmlPath);
-    }
-    
-    if (openTabs.length === 0 && fileKeys.length > 0) {
-        openTabs.push(fileKeys[0]);
-    }
+    if (lastActiveFile && files[lastActiveFile]) {
+        activeFilePath = lastActiveFile;
+    } else {
+        if (openTabs.length === 0 && indexHtmlPath) {
+            openTabs.push(indexHtmlPath);
+        }
+        
+        if (openTabs.length === 0 && fileKeys.length > 0) {
+            openTabs.push(fileKeys[0]);
+        }
 
-    activeFilePath = indexHtmlPath || (openTabs.length > 0 ? openTabs[0] : null);
+        activeFilePath = indexHtmlPath || (openTabs.length > 0 ? openTabs[0] : null);
+    }
 
     if (activeFilePath && !openTabs.includes(activeFilePath)) {
         openTabs.unshift(activeFilePath);
@@ -60,7 +64,7 @@ async function loadProject(projectId) {
         if (project && project.files) {
             currentProjectId = project.id;
             localStorage.setItem('lastOpenedProjectId', project.id);
-            initializeEditorWithFiles(project.files, project.openTabs || []);
+            initializeEditorWithFiles(project.files, project.openTabs || [], project.lastActiveFile);
             await loadSavedCodes();
             updateProjectTitle();
         }
@@ -94,7 +98,7 @@ function loadFallbackProject() {
             projects.sort((a, b) => { const dateA = currentSortMode === 'created' ? (a.createdDate || a.date) : a.date; const dateB = currentSortMode === 'created' ? (b.createdDate || b.date) : b.date; return new Date(dateB) - new Date(dateA); });
             loadProject(projects[0].id);
         } else {
-            initializeEditorWithFiles({ 'index.html': { code: '', isBinary: false } }, ['index.html']);
+            initializeEditorWithFiles({ 'index.html': { code: '', isBinary: false } }, ['index.html'], null);
         }
         loadColors();
     });
