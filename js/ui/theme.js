@@ -1,5 +1,5 @@
 const colorTypes = { Background: 'background', Comment: 'comment', Keyword: 'keyword', String: 'string', Number: 'number', Special: 'atom', Variable: 'variable', Property: 'property', Definition: 'def', Function: 'variable-2', Operator: 'operator', HTMLBracket: 'bracket', HighlightedBracket: 'matchingbracket', Class: 'variable-3', Regex: 'string-2', HTMLTag: 'tag', HTMLAttribute: 'attribute', OtherText: 'text' };
-const defaultColors = {"Background":"#1e1e1f","Comment":"#04ff00","Keyword":"#0064ff","String":"#ffff00","Number":"#ffffff","Special":"#ff00ae","Variable":"#c880ff","Property":"#757ad7","Definition":"#ff8000","Function":"#00b3ff","Operator":"#ffffff","HTMLBracket":"#fe2aec","HighlightedBracket":"#ff0000","Class":"#00ff88","Regex":"#ff00ff","HTMLTag":"#00b3ff","HTMLAttribute":"#ff7aff","OtherText":"#bababa"};
+const defaultColors = {"Background":"#0a0a0a","Comment":"#04ff00","Keyword":"#0064ff","String":"#ffff00","Number":"#ffffff","Special":"#ff00ae","Variable":"#c880ff","Property":"#757ad7","Definition":"#ff8000","Function":"#00b3ff","Operator":"#ffffff","HTMLBracket":"#fe2aec","HighlightedBracket":"#ff0000","Class":"#00ff88","Regex":"#ff00ff","HTMLTag":"#00b3ff","HTMLAttribute":"#ff7aff","OtherText":"#00c6e0"};
 
 function changeColor(type) { 
     const color = document.getElementById(type).value; 
