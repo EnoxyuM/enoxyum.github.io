@@ -232,7 +232,8 @@ async function saveCurrentCode(overwrite = false) {
             files: filesToSave,
             openTabs: openTabs,
             lastActiveFile: activeFilePath,
-            name: name
+            name: name,
+            order: Date.now()
         };
         const id = await saveCode(newProject);
         currentProjectId = id;
@@ -248,17 +249,27 @@ async function loadSavedCodes() {
     const savedProjects = allProjects.filter(p => !p.inTrash);
     const trashedProjects = allProjects.filter(p => p.inTrash);
 
-    savedProjects.sort((a, b) => {
-        const dateA = currentSortMode === 'created' ? (a.createdDate || a.date) : a.date;
-        const dateB = currentSortMode === 'created' ? (b.createdDate || b.date) : b.date;
-        return new Date(dateB) - new Date(dateA);
-    });
+    if (currentSortMode === 'free') {
+        savedProjects.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity));
+    } else {
+        savedProjects.sort((a, b) => {
+            const dateA = currentSortMode === 'created' ? (a.createdDate || a.date) : a.date;
+            const dateB = currentSortMode === 'created' ? (b.createdDate || b.date) : b.date;
+            return new Date(dateB) - new Date(dateA);
+        });
+    }
+    
     menu.innerHTML = `<div id="menu-controls"><div id="menu-main-actions"><button id="saveBtn">New Project</button><button id="exportToggleBtn">Export Projects</button><button id="exportAllBtn">Export All</button><button id="importProjectBtn">Import zip</button><button id="importFolderBtn">Import Folder</button><button id="shareUrlBtn">Share as URL</button><button id="sharePreviewBtn">Share as Preview</button><button id="sortBtn"></button><button id="colorThemeBtn">Color Theme</button><button id="basketBtn"></button></div><div id="fileInfo"></div></div><div id="project-list"></div><div id="basket-view" style="display:none; flex:1; overflow-y:auto; max-height: calc(80vh - 40px);"></div>`;
     const projectList = menu.querySelector('#project-list');
     const basketView = menu.querySelector('#basket-view');
 
     savedProjects.forEach(project => {
         const button = document.createElement('button');
+        button.dataset.projectId = project.id;
+        
+        if (currentSortMode === 'free') {
+            button.draggable = true;
+        }
 
         const textContainer = document.createElement('span');
         let innerHtml = '';
@@ -334,9 +345,25 @@ async function loadSavedCodes() {
     document.getElementById('importFolderBtn').onclick = importProjectFolder;
     document.getElementById('shareUrlBtn').onclick = () => generateShareableUrl('#p=');
     document.getElementById('sharePreviewBtn').onclick = () => generateShareableUrl('#t=');
+    
     const sortBtn = document.getElementById('sortBtn');
-    sortBtn.textContent = `Sort by: ${currentSortMode==='created'?'Created':'Changed'}`;
-    sortBtn.onclick = () => { currentSortMode = (currentSortMode === 'created') ? 'changed' : 'created'; localStorage.setItem('projectSortMode', currentSortMode); loadSavedCodes(); };
+    let sortModeText = 'Changed';
+    if (currentSortMode === 'created') sortModeText = 'Created';
+    if (currentSortMode === 'free') sortModeText = 'Free';
+    sortBtn.textContent = `Sort by: ${sortModeText}`;
+    
+    sortBtn.onclick = () => {
+        if (currentSortMode === 'created') {
+            currentSortMode = 'changed';
+        } else if (currentSortMode === 'changed') {
+            currentSortMode = 'free';
+        } else {
+            currentSortMode = 'created';
+        }
+        localStorage.setItem('projectSortMode', currentSortMode);
+        loadSavedCodes();
+    };
+
     document.getElementById('colorThemeBtn').onclick = () => { colorPicker.style.display = (colorPicker.style.display === 'none' || colorPicker.style.display === '') ? 'flex' : 'none'; };
     
     const basketBtn = document.getElementById('basketBtn');
@@ -355,17 +382,79 @@ async function loadSavedCodes() {
     basketBtn.onmousedown = (e) => { // MMB to empty basket
         if (e.button === 1) {
             e.preventDefault();
-            // Empty file/folder basket
             basket = [];
             saveBasket();
             
-            // Empty project basket
             const deletePromises = trashedProjects.map(p => deleteCode(p.id));
             Promise.all(deletePromises).then(() => {
                 loadSavedCodes();
             });
         }
     };
+
+    if (currentSortMode === 'free') {
+        let draggingElement = null;
+
+        const getProjectDragAfterElement = (container, y) => {
+            const draggableElements = [...container.querySelectorAll('button[draggable="true"]:not(.dragging)')];
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        };
+
+        projectList.addEventListener('dragstart', e => {
+            const target = e.target.closest('button[draggable="true"]');
+            if (target) {
+                draggingElement = target;
+                setTimeout(() => target.classList.add('dragging'), 0);
+            }
+        });
+
+        projectList.addEventListener('dragover', e => {
+            e.preventDefault();
+            const afterElement = getProjectDragAfterElement(projectList, e.clientY);
+            if (draggingElement) {
+                if (afterElement == null) {
+                    projectList.appendChild(draggingElement);
+                } else {
+                    projectList.insertBefore(draggingElement, afterElement);
+                }
+            }
+        });
+
+        projectList.addEventListener('dragend', () => {
+            if (draggingElement) {
+                draggingElement.classList.remove('dragging');
+                draggingElement = null;
+            }
+        });
+
+        projectList.addEventListener('drop', async e => {
+            e.preventDefault();
+            if (!draggingElement) return;
+
+            const projectButtons = [...projectList.querySelectorAll('button[data-project-id]')];
+            const updatePromises = projectButtons.map((button, index) => {
+                const projectId = parseInt(button.dataset.projectId, 10);
+                const projectToUpdate = savedProjects.find(p => p.id === projectId);
+                if (projectToUpdate && (projectToUpdate.order ?? -1) !== index) {
+                    projectToUpdate.order = index;
+                    return updateCode(projectToUpdate);
+                }
+                return null;
+            }).filter(Boolean);
+
+            if (updatePromises.length > 0) {
+                 await Promise.all(updatePromises);
+            }
+        });
+    }
 
     updateFileInfo();
     const savedScroll = localStorage.getItem('projectListScrollPosition');

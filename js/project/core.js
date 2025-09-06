@@ -95,7 +95,15 @@ function updateProjectTitle() {
 function loadFallbackProject() {
     getCodes().then(projects => {
         if (projects.length > 0) {
-            projects.sort((a, b) => { const dateA = currentSortMode === 'created' ? (a.createdDate || a.date) : a.date; const dateB = currentSortMode === 'created' ? (b.createdDate || b.date) : b.date; return new Date(dateB) - new Date(dateA); });
+            if (currentSortMode === 'free') {
+                projects.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity));
+            } else {
+                projects.sort((a, b) => { 
+                    const dateA = currentSortMode === 'created' ? (a.createdDate || a.date) : a.date; 
+                    const dateB = currentSortMode === 'created' ? (b.createdDate || b.date) : b.date; 
+                    return new Date(dateB) - new Date(dateA); 
+                });
+            }
             loadProject(projects[0].id);
         } else {
             initializeEditorWithFiles({ 'index.html': { code: '', isBinary: false } }, ['index.html'], null);
