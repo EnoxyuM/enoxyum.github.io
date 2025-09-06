@@ -18,43 +18,75 @@ function loadBasket() {
     }
 }
 
-function renderBasketView() {
+async function renderBasketView() {
     const basketView = menu.querySelector('#basket-view');
     const projectList = menu.querySelector('#project-list');
     if (!basketView || !projectList) return;
-    
+
     projectList.style.display = 'none';
     basketView.style.display = 'block';
     basketView.innerHTML = '';
 
-    if (basket.length === 0) {
-        basketView.innerHTML = '<div style="text-align: center; padding: 20px; color: #888;">Basket is empty.</div>';
-        return;
+    const allProjects = await getCodes();
+    const trashedProjects = allProjects.filter(p => p.inTrash);
+
+    let contentAdded = false;
+
+    if (trashedProjects.length > 0) {
+        contentAdded = true;
+        trashedProjects.forEach(project => {
+            const button = document.createElement('button');
+            const textContainer = document.createElement('span');
+            let innerHtml = '';
+            if (project.name) {
+                innerHtml += `<span class="name">${project.name}</span>`;
+            }
+            innerHtml += formatDate(new Date(project.date));
+            textContainer.innerHTML = innerHtml;
+            button.appendChild(textContainer);
+
+            button.onclick = async () => {
+                project.inTrash = false;
+                await updateCode(project);
+                await renderBasketView();
+
+                const allProjects = await getCodes();
+                const trashedProjects = allProjects.filter(p => p.inTrash);
+                const basketBtn = document.getElementById('basketBtn');
+                if (basketBtn) {
+                    basketBtn.textContent = `Basket(${basket.length + trashedProjects.length})`;
+                }
+            };
+            basketView.appendChild(button);
+        });
     }
 
-    basket.forEach((item, index) => {
-        const button = document.createElement('button');
-        let name = '';
-        let type = '';
-        switch(item.type) {
-            case 'project':
-                name = item.data.name || `project-${item.data.id}`;
-                type = 'Project';
-                break;
-            case 'file':
-                name = item.path;
-                type = 'File';
-                break;
-            case 'folder':
-                name = item.path;
-                type = 'Folder';
-                break;
-        }
+    if (basket.length > 0) {
+        contentAdded = true;
+        basket.forEach((item, index) => {
+            const button = document.createElement('button');
+            let name = '', type = '';
+            switch(item.type) {
+                case 'file':
+                    name = item.path;
+                    type = 'File';
+                    break;
+                case 'folder':
+                    name = item.path;
+                    type = 'Folder';
+                    break;
+            }
+            if(type){
+                button.innerHTML = `<span class="name">${type}</span> ${name}`;
+                button.onclick = () => restoreItem(index);
+                basketView.appendChild(button);
+            }
+        });
+    }
 
-        button.innerHTML = `<span class="name">${type}</span> ${name}`;
-        button.onclick = () => restoreItem(index);
-        basketView.appendChild(button);
-    });
+    if (!contentAdded) {
+        basketView.innerHTML = '<div style="text-align: center; padding: 20px; color: #888;">Basket is empty.</div>';
+    }
 }
 
 function ensurePath(filePath) {
@@ -63,9 +95,9 @@ function ensurePath(filePath) {
     for (let i = 0; i < parts.length - 1; i++) {
         currentPath = currentPath ? `${currentPath}/${parts[i]}` : parts[i];
         const placeholderPath = `${currentPath}/.p`;
-        
+
         const pathExists = Object.keys(files).some(p => p.startsWith(currentPath + '/'));
-        
+
         if (!pathExists && currentPath) {
             files[placeholderPath] = { code: '', doc: CodeMirror.Doc('', 'text/plain'), isBinary: false };
         }
@@ -76,19 +108,9 @@ async function restoreItem(index) {
     const item = basket[index];
     if (!item) return;
 
-    let itemName = item.path || item.data.name;
+    let itemName = item.path || (item.data && item.data.name);
 
     switch (item.type) {
-        case 'project':
-            const allProjects = await getCodes();
-            const nameExists = allProjects.some(p => p.name && item.data.name && p.name.toLowerCase() === item.data.name.toLowerCase());
-            if (nameExists) {
-                item.data.name = `${item.data.name} (restored)`;
-            }
-            delete item.data.id;
-            await saveCode(item.data);
-            break;
-        
         case 'file':
             if (files[item.path]) {
                 showNotification(`Cannot restore: File '${item.path}' already exists.`);
@@ -100,7 +122,7 @@ async function restoreItem(index) {
             renderAll();
             openFile(item.path);
             break;
-            
+
         case 'folder':
             const existingFolder = Object.keys(files).some(p => p.startsWith(item.path + '/'));
             if (existingFolder) {
@@ -120,7 +142,16 @@ async function restoreItem(index) {
 
     basket.splice(index, 1);
     saveBasket();
-    renderBasketView();
+
+    await renderBasketView();
+
+    const allProjects = await getCodes();
+    const trashedProjects = allProjects.filter(p => p.inTrash);
+    const basketBtn = document.getElementById('basketBtn');
+    if (basketBtn) {
+        basketBtn.textContent = `Basket(${basket.length + trashedProjects.length})`;
+    }
+
     showNotification(`Restored ${item.type} '${itemName}'.`);
 }
 
@@ -146,7 +177,7 @@ async function saveCurrentCode(overwrite = false) {
     if (activeFilePath && files[activeFilePath] && !files[activeFilePath].isBinary) {
         files[activeFilePath].code = editor.getValue();
     }
-    
+
     const filesToSave = {};
     for (const filepath in files) {
         if (files[filepath].isBinary) {
@@ -199,7 +230,11 @@ async function saveCurrentCode(overwrite = false) {
 }
 
 async function loadSavedCodes() {
-    const savedProjects = await getCodes();
+    const allProjects = await getCodes();
+
+    const savedProjects = allProjects.filter(p => !p.inTrash);
+    const trashedProjects = allProjects.filter(p => p.inTrash);
+
     savedProjects.sort((a, b) => {
         const dateA = currentSortMode === 'created' ? (a.createdDate || a.date) : a.date;
         const dateB = currentSortMode === 'created' ? (b.createdDate || b.date) : b.date;
@@ -225,10 +260,10 @@ async function loadSavedCodes() {
         arrow.className = 'export-arrow';
         arrow.title = 'Export project as .zip';
         arrow.addEventListener('click', e => { e.stopPropagation(); exportProjectAsZip(project.id); e.currentTarget.classList.add('exported'); setTimeout(() => e.currentTarget.classList.remove('exported'), 300000); });
-        
+
         button.appendChild(textContainer);
         button.appendChild(arrow);
-        
+
         button.onclick = () => loadProject(project.id);
         button.oncontextmenu = e => {
             e.preventDefault();
@@ -237,11 +272,12 @@ async function loadSavedCodes() {
                 placeholder: 'Enter project name...',
                 onSave: async (newName) => {
                     if (project.name === newName) return;
-                    
+
                     const allProjects = await getCodes();
-                    const nameExists = allProjects.some(p => 
-                        p.id !== project.id && 
-                        p.name && 
+                    const nameExists = allProjects.some(p =>
+                        p.id !== project.id &&
+                        !p.inTrash &&
+                        p.name &&
                         p.name.toLowerCase() === newName.toLowerCase()
                     );
 
@@ -261,17 +297,15 @@ async function loadSavedCodes() {
         button.onmousedown = e => {
             if (e.button === 1) {
                 e.preventDefault();
-                basket.push({ type: 'project', data: project });
-                
-                if (localStorage.getItem('lastOpenedProjectId') == project.id) localStorage.removeItem('lastOpenedProjectId');
-                deleteCode(project.id).then(() => {
+                project.inTrash = true;
+                updateCode(project).then(() => {
                     if (currentProjectId === project.id) {
                         currentProjectId = null;
-                        initializeEditorWithFiles({ 'index.html': { code: '', isBinary: false } }, ['index.html'], null);
-                        updateProjectTitle();
+                        localStorage.removeItem('lastOpenedProjectId');
+                        loadFallbackProject();
+                    } else {
+                        loadSavedCodes();
                     }
-                    saveBasket();
-                    loadSavedCodes();
                 });
             }
         };
@@ -291,23 +325,32 @@ async function loadSavedCodes() {
     sortBtn.textContent = `Sort by: ${currentSortMode==='created'?'Created':'Changed'}`;
     sortBtn.onclick = () => { currentSortMode = (currentSortMode === 'created') ? 'changed' : 'created'; localStorage.setItem('projectSortMode', currentSortMode); loadSavedCodes(); };
     document.getElementById('colorThemeBtn').onclick = () => { colorPicker.style.display = (colorPicker.style.display === 'none' || colorPicker.style.display === '') ? 'flex' : 'none'; };
-    
+
     const basketBtn = document.getElementById('basketBtn');
-    basketBtn.textContent = `Basket(${basket.length})`;
+    basketBtn.textContent = `Basket(${basket.length + trashedProjects.length})`;
     basketBtn.onclick = () => {
         const isBasketVisible = basketView.style.display !== 'none';
         if(isBasketVisible) {
             basketView.style.display = 'none';
             projectList.style.display = 'block';
+            basketBtn.classList.remove('basket-active');
         } else {
             renderBasketView();
+            basketBtn.classList.add('basket-active');
         }
     };
     basketBtn.onmousedown = (e) => {
         if (e.button === 1) {
             e.preventDefault();
+
             basket = [];
             saveBasket();
+
+
+            const deletePromises = trashedProjects.map(p => deleteCode(p.id));
+            Promise.all(deletePromises).then(() => {
+                loadSavedCodes();
+            });
         }
     };
 
