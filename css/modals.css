@@ -18,6 +18,8 @@
 #menu button { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px; margin: 5px 0; background: #333; color: #fff; border: none; cursor: pointer; text-align: left; box-sizing: border-box; border-radius: 8px; }
 #menu button:hover { background: #444; }
 #menu button.selected { background: #555; }
+#menu button.basket-active { background: #b85d0d; }
+#menu button.basket-active:hover { background: #c96e1e; }
 #menu button .name { color: #ff9800; font-weight: bold; display: block; }
 #saveBtn { background: #4CAF50 !important; }
 #saveBtn:hover { background: #45a049 !important; }
