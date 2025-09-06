@@ -22,7 +22,7 @@ async function renderBasketView() {
     const basketView = menu.querySelector('#basket-view');
     const projectList = menu.querySelector('#project-list');
     if (!basketView || !projectList) return;
-
+    
     projectList.style.display = 'none';
     basketView.style.display = 'block';
     basketView.innerHTML = '';
@@ -44,12 +44,12 @@ async function renderBasketView() {
             innerHtml += formatDate(new Date(project.date));
             textContainer.innerHTML = innerHtml;
             button.appendChild(textContainer);
-
+            
             button.onclick = async () => {
                 project.inTrash = false;
                 await updateCode(project);
                 await renderBasketView();
-
+                
                 const allProjects = await getCodes();
                 const trashedProjects = allProjects.filter(p => p.inTrash);
                 const basketBtn = document.getElementById('basketBtn');
@@ -95,9 +95,9 @@ function ensurePath(filePath) {
     for (let i = 0; i < parts.length - 1; i++) {
         currentPath = currentPath ? `${currentPath}/${parts[i]}` : parts[i];
         const placeholderPath = `${currentPath}/.p`;
-
+        
         const pathExists = Object.keys(files).some(p => p.startsWith(currentPath + '/'));
-
+        
         if (!pathExists && currentPath) {
             files[placeholderPath] = { code: '', doc: CodeMirror.Doc('', 'text/plain'), isBinary: false };
         }
@@ -122,7 +122,7 @@ async function restoreItem(index) {
             renderAll();
             openFile(item.path);
             break;
-
+            
         case 'folder':
             const existingFolder = Object.keys(files).some(p => p.startsWith(item.path + '/'));
             if (existingFolder) {
@@ -177,7 +177,7 @@ async function saveCurrentCode(overwrite = false) {
     if (activeFilePath && files[activeFilePath] && !files[activeFilePath].isBinary) {
         files[activeFilePath].code = editor.getValue();
     }
-
+    
     const filesToSave = {};
     for (const filepath in files) {
         if (files[filepath].isBinary) {
@@ -196,20 +196,33 @@ async function saveCurrentCode(overwrite = false) {
     const now = new Date();
 
     if (overwrite && currentProjectId !== null) {
-        const tx = db.transaction([STORE_NAME], 'readwrite');
-        const store = tx.objectStore(STORE_NAME);
-        const getReq = store.get(currentProjectId);
-        getReq.onsuccess = e => {
-            const project = e.target.result;
-            if (project) {
-                project.files = filesToSave;
-                project.openTabs = openTabs;
-                project.lastActiveFile = activeFilePath;
-                project.date = now;
-                updateCode(project).then(loadSavedCodes);
-                localStorage.setItem('lastOpenedProjectId', currentProjectId);
-            }
-        };
+        await new Promise((resolve, reject) => {
+            const tx = db.transaction([STORE_NAME], 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+            const getReq = store.get(currentProjectId);
+
+            getReq.onerror = reject;
+
+            getReq.onsuccess = e => {
+                const project = e.target.result;
+                if (project) {
+                    project.files = filesToSave;
+                    project.openTabs = openTabs;
+                    project.lastActiveFile = activeFilePath;
+                    project.date = now;
+                    
+                    const updateReq = store.put(project);
+                    updateReq.onsuccess = () => {
+                        localStorage.setItem('lastOpenedProjectId', currentProjectId);
+                        loadSavedCodes();
+                        resolve();
+                    };
+                    updateReq.onerror = reject;
+                } else {
+                    resolve();
+                }
+            };
+        });
     } else {
         const pad = (num, size) => String(num).padStart(size, '0');
         const name = `${pad(now.getDate(), 2)}.${pad(now.getMonth() + 1, 2)}.${now.getFullYear()} ${pad(now.getHours(), 2)}:${pad(now.getMinutes(), 2)}:${pad(now.getSeconds(), 2)} ${pad(now.getMilliseconds(), 3)}`;
@@ -224,7 +237,7 @@ async function saveCurrentCode(overwrite = false) {
         const id = await saveCode(newProject);
         currentProjectId = id;
         localStorage.setItem('lastOpenedProjectId', currentProjectId);
-        loadSavedCodes();
+        await loadSavedCodes();
     }
     updateProjectTitle();
 }
@@ -260,10 +273,10 @@ async function loadSavedCodes() {
         arrow.className = 'export-arrow';
         arrow.title = 'Export project as .zip';
         arrow.addEventListener('click', e => { e.stopPropagation(); exportProjectAsZip(project.id); e.currentTarget.classList.add('exported'); setTimeout(() => e.currentTarget.classList.remove('exported'), 300000); });
-
+        
         button.appendChild(textContainer);
         button.appendChild(arrow);
-
+        
         button.onclick = () => loadProject(project.id);
         button.oncontextmenu = e => {
             e.preventDefault();
@@ -272,12 +285,12 @@ async function loadSavedCodes() {
                 placeholder: 'Enter project name...',
                 onSave: async (newName) => {
                     if (project.name === newName) return;
-
+                    
                     const allProjects = await getCodes();
-                    const nameExists = allProjects.some(p =>
-                        p.id !== project.id &&
+                    const nameExists = allProjects.some(p => 
+                        p.id !== project.id && 
                         !p.inTrash &&
-                        p.name &&
+                        p.name && 
                         p.name.toLowerCase() === newName.toLowerCase()
                     );
 
@@ -295,7 +308,7 @@ async function loadSavedCodes() {
             });
         };
         button.onmousedown = e => {
-            if (e.button === 1) {
+            if (e.button === 1) { // MMB to move to basket
                 e.preventDefault();
                 project.inTrash = true;
                 updateCode(project).then(() => {
@@ -325,7 +338,7 @@ async function loadSavedCodes() {
     sortBtn.textContent = `Sort by: ${currentSortMode==='created'?'Created':'Changed'}`;
     sortBtn.onclick = () => { currentSortMode = (currentSortMode === 'created') ? 'changed' : 'created'; localStorage.setItem('projectSortMode', currentSortMode); loadSavedCodes(); };
     document.getElementById('colorThemeBtn').onclick = () => { colorPicker.style.display = (colorPicker.style.display === 'none' || colorPicker.style.display === '') ? 'flex' : 'none'; };
-
+    
     const basketBtn = document.getElementById('basketBtn');
     basketBtn.textContent = `Basket(${basket.length + trashedProjects.length})`;
     basketBtn.onclick = () => {
@@ -339,14 +352,14 @@ async function loadSavedCodes() {
             basketBtn.classList.add('basket-active');
         }
     };
-    basketBtn.onmousedown = (e) => {
+    basketBtn.onmousedown = (e) => { // MMB to empty basket
         if (e.button === 1) {
             e.preventDefault();
-
+            // Empty file/folder basket
             basket = [];
             saveBasket();
-
-
+            
+            // Empty project basket
             const deletePromises = trashedProjects.map(p => deleteCode(p.id));
             Promise.all(deletePromises).then(() => {
                 loadSavedCodes();
