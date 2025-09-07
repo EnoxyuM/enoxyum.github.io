@@ -26,6 +26,7 @@ let openFolders = new Set();
 let activeFilePath = null;
 let currentProjectId = null;
 let currentSortMode = localStorage.getItem('projectSortMode') || 'created';
+let versionListParentId = null;
 const blobUrls = [];
 let db;
 let basket = [];

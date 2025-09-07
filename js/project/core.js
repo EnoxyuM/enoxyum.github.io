@@ -81,9 +81,17 @@ function updateProjectTitle() {
     }
     getCodes().then(projects => {
         const currentProject = projects.find(p => p.id === currentProjectId);
-        if (currentProject && currentProject.name) {
-            projectTitle.textContent = `📁 ${currentProject.name}`;
-            projectTitle.title = `Project: ${currentProject.name}`;
+        if (currentProject) {
+            let titleText = currentProject.name ? `📁 ${currentProject.name}` : '📁 Project';
+            let titleAttr = currentProject.name ? `Project: ${currentProject.name}` : 'Unnamed Project';
+            
+            if (currentProject.version) {
+                titleText += ` ${currentProject.version}`;
+                titleAttr += ` (${currentProject.version})`;
+            }
+            
+            projectTitle.textContent = titleText;
+            projectTitle.title = titleAttr;
         } else {
             projectTitle.textContent = '📁 Project';
             projectTitle.title = 'Unnamed Project';
