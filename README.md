@@ -4,12 +4,14 @@
   </h1>
 </div>
 
+I did changed shortcut for Switching between code editing and preview from Alt to Ctrl+Alt since it was conflicting with Alt+Tab a lot
+
 ## ⌨️ Keyboard & Mouse Shortcuts
 
 ### Editor
 | Shortcut | Action |
 | :--- | :--- |
-| `Alt` | Switch between code editing and preview |
+| `Ctrl` + `Alt` | Switch between code editing and preview |
 | `Esc` | Toggle Project menu |
 | `Alt` + `Shift` | Toggle console |
 | `Ctrl` + `S` | Save current project |
