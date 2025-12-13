@@ -2,7 +2,7 @@ function setupShortcuts() {
     document.addEventListener('keydown', e => { 
         if (e.key === 'Escape') { 
             toggleMenu(); 
-        } else if (e.altKey && !e.shiftKey && !altPressed) { 
+        } else if (e.ctrlKey && e.altKey && !e.shiftKey && !altPressed) { 
             e.preventDefault(); 
             altPressed = true; 
             toggleEditor(); 
@@ -26,7 +26,7 @@ function setupShortcuts() {
                 if (e.key === 'Escape') { 
                     e.preventDefault(); 
                     toggleMenu(); 
-                } else if (e.altKey && !e.shiftKey) { 
+                } else if (e.ctrlKey && e.altKey && !e.shiftKey) { 
                     e.preventDefault(); 
                     toggleEditor(); 
                 } else if (e.altKey && e.shiftKey) { 
