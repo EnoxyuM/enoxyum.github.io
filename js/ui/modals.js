@@ -53,3 +53,110 @@ function toggleMenu() {
         colorPicker.style.display = 'none'; 
     } 
 }
+
+async function renderLauncher() {
+    launcherView.innerHTML = '';
+    const grid = document.createElement('div');
+    grid.className = 'app-grid';
+    
+    // Editor Icon
+    const editorContainer = document.createElement('div');
+    editorContainer.className = 'app-icon-container';
+    editorContainer.innerHTML = `
+        <div class="app-icon editor-icon">📝</div>
+        <div class="app-name">Editor</div>
+    `;
+    editorContainer.onclick = () => {
+        isLauncherMode = false;
+        launcherView.style.display = 'none';
+        editorElement.style.display = 'block';
+        document.getElementById('file-tabs').style.display = 'flex';
+        document.querySelector('.live-update-switch').style.display = 'block';
+        if (scene) scene.style.pointerEvents = 'none';
+        updateScene();
+    };
+    grid.appendChild(editorContainer);
+
+    const shortcuts = getLauncherShortcuts();
+    const allProjects = await getCodes();
+    
+    shortcuts.forEach(id => {
+        const project = allProjects.find(p => p.id === id);
+        if (project) {
+            const appContainer = document.createElement('div');
+            appContainer.className = 'app-icon-container';
+            const initials = (project.name || '?').substring(0, 2).toUpperCase();
+            
+            // Generate a persistent color based on project ID
+            const hue = (project.id * 137.508) % 360; 
+            const colorStyle = `hsl(${hue}, 60%, 40%)`;
+
+            appContainer.innerHTML = `
+                <div class="app-icon" style="background-color: ${colorStyle}">${initials}</div>
+                <div class="app-name">${project.name || 'Project'}</div>
+            `;
+            
+            // Remove from launcher on middle click
+            appContainer.onmousedown = (e) => {
+                if (e.button === 1) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const newShortcuts = shortcuts.filter(sid => sid !== id);
+                    saveLauncherShortcuts(newShortcuts);
+                    renderLauncher();
+                }
+            };
+
+            appContainer.onclick = async () => {
+                // Launch Project in Run Mode
+                launcherView.style.display = 'none';
+                isLauncherMode = true;
+                
+                // Hide editor UI elements
+                editorElement.style.display = 'none';
+                document.getElementById('file-tabs').style.display = 'none';
+                document.querySelector('.live-update-switch').style.display = 'none';
+                menu.style.display = 'none';
+                
+                // Load and run
+                await loadProject(id);
+                scene.style.zIndex = '5';
+                scene.style.pointerEvents = 'auto';
+                scene.focus();
+            };
+            grid.appendChild(appContainer);
+        }
+    });
+
+    launcherView.appendChild(grid);
+}
+
+function toggleLauncher() {
+    const isVisible = launcherView.style.display === 'block';
+    if (isVisible) {
+        // Hiding launcher - Determine where to go based on state
+        if (isLauncherMode) {
+            // If in launcher mode, go back to the running project scene
+            launcherView.style.display = 'none';
+            scene.focus();
+        } else {
+            // Go back to editor
+            launcherView.style.display = 'none';
+            editorElement.style.display = 'block';
+            document.getElementById('file-tabs').style.display = 'flex';
+            document.querySelector('.live-update-switch').style.display = 'block';
+            editor.focus();
+        }
+    } else {
+        // Showing launcher
+        // Hide everything else
+        editorElement.style.display = 'none';
+        document.getElementById('file-tabs').style.display = 'none';
+        document.querySelector('.live-update-switch').style.display = 'none';
+        menu.style.display = 'none';
+        colorPicker.style.display = 'none';
+        
+        launcherView.style.display = 'block';
+        renderLauncher();
+    }
+}
