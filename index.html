@@ -15,7 +15,7 @@
       if (location.hash === '#t' || location.hash.startsWith('#t=')) {
         document.write(`<style>
             body, html { background: #fff !important; }
-            #file-tabs, #file-panel, #editor, #menu, #colorPicker, .live-update-switch, #console, #context-menu, #notification, #run-btn, #copy-btn, #paste-project-btn { display: none !important; }
+            #file-tabs, #file-panel, #editor, #menu, #colorPicker, .live-update-switch, #console, #context-menu, #notification, #run-btn, #copy-btn, #paste-project-btn, #launcher-btn { display: none !important; }
             #scene {
                 position: fixed; top: 0; left: 0;
                 width: 100vw; height: 100vh;
@@ -57,6 +57,7 @@
         <div id="copy-btn" title="Copy all files to clipboard">📋</div>
         <div id="paste-project-btn" title="Create project from clipboard">📜</div>
         <div id="run-btn" title="Save and Run in New Tab">▶</div>
+        <div id="launcher-btn" title="Open Launcher">🚀</div>
         <div id="drag-drop-overlay">
             <div class="drop-zone" id="drop-zone-tag">Tag</div>
             <div class="drop-zone" id="drop-zone-nothing">Nothing</div>
@@ -73,6 +74,7 @@
     <iframe id="scene"></iframe>
     <div id="console"></div>
     <div id="menu"></div>
+    <div id="launcher-view"></div>
     <div id="colorPicker">
         <div class="color-item"><label for="Background">Background</label><input type="color" id="Background"></div><div class="color-item"><label for="Comment">Comment</label><input type="color" id="Comment"></div><div class="color-item"><label for="Keyword">Keyword</label><input type="color" id="Keyword"></div><div class="color-item"><label for="String">String</label><input type="color" id="String"></div><div class="color-item"><label for="Number">Number</label><input type="color" id="Number"></div><div class="color-item"><label for="Special">Special</label><input type="color" id="Special"></div><div class="color-item"><label for="Variable">Variable</label><input type="color" id="Variable"></div><div class="color-item"><label for="Property">Property</label><input type="color" id="Property"></div><div class="color-item"><label for="Definition">Definition</label><input type="color" id="Definition"></div><div class="color-item"><label for="Function">Function</label><input type="color" id="Function"></div><div class="color-item"><label for="Operator">Operator</label><input type="color" id="Operator"></div><div class="color-item"><label for="HTMLBracket">HTML Bracket</label><input type="color" id="HTMLBracket"></div><div class="color-item"><label for="HighlightedBracket">Highlighted Bracket</label><input type="color" id="HighlightedBracket"></div><div class="color-item"><label for="Class">Class</label><input type="color" id="Class"></div><div class="color-item"><label for="Regex">Regex</label><input type="color" id="Regex"></div><div class="color-item"><label for="HTMLTag">HTML Tag</label><input type="color" id="HTMLTag"></div><div class="color-item"><label for="HTMLAttribute">HTML Attribute</label><input type="color" id="HTMLAttribute"></div><div class="color-item"><label for="OtherText">OtherText</label><input type="color" id="OtherText"></div><button id="importBtn">Import</button><button id="exportBtn">Export</button>
     </div>
