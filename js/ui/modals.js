@@ -108,22 +108,33 @@ async function renderLauncher() {
             };
 
             appContainer.onclick = async () => {
-                // Launch Project in Run Mode
-                launcherView.style.display = 'none';
-                isLauncherMode = true;
-                
-                // Hide editor UI elements
-                editorElement.style.display = 'none';
-                document.getElementById('file-tabs').style.display = 'none';
-                document.querySelector('.live-update-switch').style.display = 'none';
-                menu.style.display = 'none';
-                
-                // Load and run
-                await loadProject(id);
-                updateScene(); // Force update scene even if live update is off
-                scene.style.zIndex = '5';
-                scene.style.pointerEvents = 'auto';
-                scene.focus();
+                try {
+                    launcherView.style.display = 'none';
+                    isLauncherMode = true;
+                    
+                    editorElement.style.display = 'none';
+                    document.getElementById('file-tabs').style.display = 'none';
+                    document.querySelector('.live-update-switch').style.display = 'none';
+                    menu.style.display = 'none';
+                    
+                    await loadProject(id);
+                    updateScene(); 
+                    scene.style.zIndex = '5';
+                    scene.style.pointerEvents = 'auto';
+                    scene.focus();
+                } catch (e) {
+                    console.error("Launcher error:", e);
+                    showNotification("Failed to launch project");
+                    // Revert UI to editor mode if failed
+                    isLauncherMode = false;
+                    editorElement.style.display = 'block';
+                    document.getElementById('file-tabs').style.display = 'flex';
+                    document.querySelector('.live-update-switch').style.display = 'block';
+                    if (scene) {
+                        scene.style.zIndex = '0';
+                        scene.style.pointerEvents = 'none';
+                    }
+                }
             };
             grid.appendChild(appContainer);
         }
