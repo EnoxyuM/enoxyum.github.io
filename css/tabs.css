@@ -6,7 +6,7 @@
     position: absolute;
     top: 5px;
     left: calc(55px + 150px + 5px);
-    right: 150px;
+    right: 190px;
     transition: left 0.3s ease;
 }
 
