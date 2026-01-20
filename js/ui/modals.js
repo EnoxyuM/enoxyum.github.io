@@ -63,9 +63,20 @@ async function renderLauncher() {
     const shortcuts = getLauncherShortcuts();
     const allProjects = await getCodes();
     
+    // Calculate grid layout metrics for centering
+    const maxCols = Math.floor(window.innerWidth / GRID_CELL_W);
+    const gridWidth = maxCols * GRID_CELL_W;
+    const gridOffsetX = Math.max(0, (window.innerWidth - gridWidth) / 2);
+    
     // Setup drop handlers only once
     if (!launcherView.getAttribute('data-drop-init')) {
         launcherView.setAttribute('data-drop-init', 'true');
+        
+        window.addEventListener('resize', () => {
+            if (launcherView.style.display === 'block') {
+                renderLauncher();
+            }
+        });
         
         launcherView.ondragover = (e) => {
             e.preventDefault(); 
@@ -76,16 +87,20 @@ async function renderLauncher() {
             e.preventDefault();
             if (!draggedLauncherItem) return;
 
-            // Calculate grid snap coordinates
-            const x = Math.max(0, Math.floor(e.clientX / GRID_CELL_W));
+            // Recalculate metrics for current state
+            const curMaxCols = Math.floor(window.innerWidth / GRID_CELL_W);
+            const curGridWidth = curMaxCols * GRID_CELL_W;
+            const curOffsetX = Math.max(0, (window.innerWidth - curGridWidth) / 2);
+
+            // Calculate grid snap coordinates using offset
+            const x = Math.max(0, Math.floor((e.clientX - curOffsetX) / GRID_CELL_W));
             const y = Math.max(0, Math.floor(e.clientY / GRID_CELL_H));
 
             // Check bounds to prevent partial off-screen
-            const maxCols = Math.floor(window.innerWidth / GRID_CELL_W);
             const maxRows = Math.floor(window.innerHeight / GRID_CELL_H);
             
-            // If x is too far right, or y too far down
-            if (x >= maxCols) return;
+            // If x is too far right or y too far down
+            if (x >= curMaxCols) return;
             if (y >= maxRows) return;
 
             const currentShortcuts = getLauncherShortcuts();
@@ -160,8 +175,8 @@ async function renderLauncher() {
             });
         }
 
-        // Update position
-        container.style.left = (item.x * GRID_CELL_W) + 'px';
+        // Update position with offset
+        container.style.left = (item.x * GRID_CELL_W + gridOffsetX) + 'px';
         container.style.top = (item.y * GRID_CELL_H) + 'px';
 
         if (item.id === 'editor') {
@@ -245,7 +260,6 @@ async function renderLauncher() {
         }
     });
 
-    // Cleanup removed icons
     childrenById.forEach((node, id) => {
         if (!touchedIds.has(id)) {
             node.remove();
