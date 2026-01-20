@@ -59,7 +59,6 @@ const GRID_CELL_W = 100;
 const GRID_CELL_H = 120;
 
 async function renderLauncher() {
-    // launcherView.innerHTML = ''; // Removed to prevent flickering
     
     const shortcuts = getLauncherShortcuts();
     const allProjects = await getCodes();
@@ -179,6 +178,7 @@ async function renderLauncher() {
                     document.getElementById('file-tabs').style.display = 'flex';
                     document.querySelector('.live-update-switch').style.display = 'block';
                     if (scene) scene.style.pointerEvents = 'none';
+                    editor.refresh();
                     updateScene();
                 };
                 container.onmousedown = null;
@@ -239,6 +239,7 @@ async function renderLauncher() {
                         scene.style.zIndex = '0';
                         scene.style.pointerEvents = 'none';
                     }
+                    editor.refresh();
                 }
             };
         }
@@ -263,6 +264,7 @@ function toggleLauncher() {
             editorElement.style.display = 'block';
             document.getElementById('file-tabs').style.display = 'flex';
             document.querySelector('.live-update-switch').style.display = 'block';
+            editor.refresh();
             editor.focus();
         }
     } else {
