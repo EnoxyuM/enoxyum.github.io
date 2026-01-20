@@ -41,4 +41,4 @@ const ALPHABET_MAP = new Map(URL_ALPHABET.split('').map((c, i) => [c, BigInt(i)]
 let currentMediaBlobUrl = null;
 let forceOpenAsText = new Set();
 let altPressed = false, shiftAltPressed = false;
-let showingEditor = false, showingConsole = false;
+let showingEditor = false, showingConsole = false; 
