@@ -54,70 +54,70 @@ function toggleMenu() {
     } 
 }
 
+let draggedLauncherItem = null;
+const GRID_CELL_W = 100;
+const GRID_CELL_H = 120;
+
 async function renderLauncher() {
     launcherView.innerHTML = '';
-    const grid = document.createElement('div');
-    grid.className = 'app-grid';
     
-    // Editor Icon
-    const editorContainer = document.createElement('div');
-    editorContainer.className = 'app-icon-container';
-    editorContainer.innerHTML = `
-        <div class="app-icon editor-icon">📝</div>
-        <div class="app-name">Editor</div>
-    `;
-    editorContainer.onclick = () => {
-        isLauncherMode = false;
-        launcherView.style.display = 'none';
-        editorElement.style.display = 'block';
-        document.getElementById('file-tabs').style.display = 'flex';
-        document.querySelector('.live-update-switch').style.display = 'block';
-        if (scene) scene.style.pointerEvents = 'none';
-        updateScene();
-    };
-    grid.appendChild(editorContainer);
-
     const shortcuts = getLauncherShortcuts();
     const allProjects = await getCodes();
     
-    shortcuts.forEach(id => {
-        const project = allProjects.find(p => p.id === id);
-        if (project) {
-            const appContainer = document.createElement('div');
-            appContainer.className = 'app-icon-container';
+    // Create icons based on stored coordinates
+    const createIcon = (item, isEditor = false) => {
+        const container = document.createElement('div');
+        container.className = 'app-icon-container';
+        container.style.left = (item.x * GRID_CELL_W) + 'px';
+        container.style.top = (item.y * GRID_CELL_H) + 'px';
+        container.draggable = true;
+
+        if (isEditor) {
+            container.innerHTML = `
+                <div class="app-icon editor-icon">📝</div>
+                <div class="app-name">Editor</div>
+            `;
+            container.onclick = () => {
+                isLauncherMode = false;
+                launcherView.style.display = 'none';
+                editorElement.style.display = 'block';
+                document.getElementById('file-tabs').style.display = 'flex';
+                document.querySelector('.live-update-switch').style.display = 'block';
+                if (scene) scene.style.pointerEvents = 'none';
+                updateScene();
+            };
+        } else {
+            const project = allProjects.find(p => p.id === item.id);
+            if (!project) return null; // Project deleted?
+
             const initials = (project.name || '?').substring(0, 2).toUpperCase();
-            
-            // Generate a persistent color based on project ID
             const hue = (project.id * 137.508) % 360; 
             const colorStyle = `hsl(${hue}, 60%, 40%)`;
 
-            appContainer.innerHTML = `
+            container.innerHTML = `
                 <div class="app-icon" style="background-color: ${colorStyle}">${initials}</div>
                 <div class="app-name">${project.name || 'Project'}</div>
             `;
-            
-            // Remove from launcher on middle click
-            appContainer.onmousedown = (e) => {
-                if (e.button === 1) {
+
+            container.onmousedown = (e) => {
+                if (e.button === 1) { // Middle click delete
                     e.preventDefault();
                     e.stopPropagation();
-                    const newShortcuts = shortcuts.filter(sid => sid !== id);
+                    const newShortcuts = shortcuts.filter(s => s.id !== item.id);
                     saveLauncherShortcuts(newShortcuts);
                     renderLauncher();
                 }
             };
 
-            appContainer.onclick = async () => {
+            container.onclick = async () => {
                 try {
                     launcherView.style.display = 'none';
                     isLauncherMode = true;
-                    
                     editorElement.style.display = 'none';
                     document.getElementById('file-tabs').style.display = 'none';
                     document.querySelector('.live-update-switch').style.display = 'none';
                     menu.style.display = 'none';
-                    
-                    await loadProject(id);
+                    await loadProject(item.id);
                     updateScene(); 
                     scene.style.zIndex = '5';
                     scene.style.pointerEvents = 'auto';
@@ -125,7 +125,6 @@ async function renderLauncher() {
                 } catch (e) {
                     console.error("Launcher error:", e);
                     showNotification("Failed to launch project");
-                    // Revert UI to editor mode if failed
                     isLauncherMode = false;
                     editorElement.style.display = 'block';
                     document.getElementById('file-tabs').style.display = 'flex';
@@ -136,23 +135,84 @@ async function renderLauncher() {
                     }
                 }
             };
-            grid.appendChild(appContainer);
+        }
+
+        // Drag handlers
+        container.addEventListener('dragstart', (e) => {
+            draggedLauncherItem = item;
+            // Calculate offset to prevent "jump"
+            const rect = container.getBoundingClientRect();
+            e.dataTransfer.setData('text/plain', JSON.stringify({
+                id: item.id,
+                offsetX: e.clientX - rect.left,
+                offsetY: e.clientY - rect.top
+            }));
+            e.dataTransfer.effectAllowed = 'move';
+            setTimeout(() => container.classList.add('dragging'), 0);
+        });
+
+        container.addEventListener('dragend', () => {
+            container.classList.remove('dragging');
+            draggedLauncherItem = null;
+        });
+
+        launcherView.appendChild(container);
+    };
+
+    shortcuts.forEach(item => {
+        if (item.id === 'editor') {
+            createIcon(item, true);
+        } else {
+            createIcon(item, false);
         }
     });
 
-    launcherView.appendChild(grid);
+    // Drop zone logic on the main view
+    launcherView.ondragover = (e) => {
+        e.preventDefault(); 
+        e.dataTransfer.dropEffect = 'move';
+    };
+
+    launcherView.ondrop = (e) => {
+        e.preventDefault();
+        if (!draggedLauncherItem) return;
+
+        // Calculate grid snap coordinates
+        const x = Math.max(0, Math.floor(e.clientX / GRID_CELL_W));
+        const y = Math.max(0, Math.floor(e.clientY / GRID_CELL_H));
+
+        // Check collision/swap
+        const targetItemIndex = shortcuts.findIndex(s => s.x === x && s.y === y);
+        const sourceItemIndex = shortcuts.findIndex(s => s.id === draggedLauncherItem.id);
+
+        if (sourceItemIndex === -1) return;
+
+        if (targetItemIndex > -1 && targetItemIndex !== sourceItemIndex) {
+            // Swap positions
+            const targetItem = shortcuts[targetItemIndex];
+            targetItem.x = draggedLauncherItem.x;
+            targetItem.y = draggedLauncherItem.y;
+            shortcuts[sourceItemIndex].x = x;
+            shortcuts[sourceItemIndex].y = y;
+        } else {
+            // Move to empty space
+            shortcuts[sourceItemIndex].x = x;
+            shortcuts[sourceItemIndex].y = y;
+        }
+
+        saveLauncherShortcuts(shortcuts);
+        renderLauncher();
+        draggedLauncherItem = null;
+    };
 }
 
 function toggleLauncher() {
     const isVisible = launcherView.style.display === 'block';
     if (isVisible) {
-        // Hiding launcher - Determine where to go based on state
         if (isLauncherMode) {
-            // If in launcher mode, go back to the running project scene
             launcherView.style.display = 'none';
             scene.focus();
         } else {
-            // Go back to editor
             launcherView.style.display = 'none';
             editorElement.style.display = 'block';
             document.getElementById('file-tabs').style.display = 'flex';
@@ -160,8 +220,6 @@ function toggleLauncher() {
             editor.focus();
         }
     } else {
-        // Showing launcher
-        // Hide everything else
         editorElement.style.display = 'none';
         document.getElementById('file-tabs').style.display = 'none';
         document.querySelector('.live-update-switch').style.display = 'none';
