@@ -58,17 +58,23 @@ function initializeEditorWithFiles(fileSet, loadedOpenTabs, lastActiveFile) {
 }
 
 async function loadProject(projectId) {
-    const request = db.transaction([STORE_NAME], 'readonly').objectStore(STORE_NAME).get(projectId);
-    request.onsuccess = async e => {
-        const project = e.target.result;
-        if (project && project.files) {
-            currentProjectId = project.id;
-            localStorage.setItem('lastOpenedProjectId', project.id);
-            initializeEditorWithFiles(project.files, project.openTabs || [], project.lastActiveFile);
-            await loadSavedCodes();
-            updateProjectTitle();
-        }
-    };
+    return new Promise((resolve, reject) => {
+        const request = db.transaction([STORE_NAME], 'readonly').objectStore(STORE_NAME).get(projectId);
+        request.onsuccess = async e => {
+            const project = e.target.result;
+            if (project && project.files) {
+                currentProjectId = project.id;
+                localStorage.setItem('lastOpenedProjectId', project.id);
+                initializeEditorWithFiles(project.files, project.openTabs || [], project.lastActiveFile);
+                await loadSavedCodes();
+                updateProjectTitle();
+                resolve();
+            } else {
+                reject('Project not found');
+            }
+        };
+        request.onerror = (e) => reject(e);
+    });
 }
 
 function updateProjectTitle() {
