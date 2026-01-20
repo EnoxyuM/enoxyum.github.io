@@ -120,6 +120,7 @@ async function renderLauncher() {
                 
                 // Load and run
                 await loadProject(id);
+                updateScene(); // Force update scene even if live update is off
                 scene.style.zIndex = '5';
                 scene.style.pointerEvents = 'auto';
                 scene.focus();
