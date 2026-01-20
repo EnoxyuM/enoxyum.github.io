@@ -164,4 +164,10 @@ function setupEventListeners() {
         await saveCurrentCode(true);
         window.open(`${location.origin}${location.pathname}#t`, '_blank');
     });
+
+    if (launcherBtn) {
+        launcherBtn.addEventListener('click', () => {
+            toggleLauncher();
+        });
+    }
 }
