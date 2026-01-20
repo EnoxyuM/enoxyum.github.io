@@ -100,3 +100,65 @@
 #inline-input-field:focus {
     border-color: #094771;
 }
+
+#launcher-view {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: #121212;
+    z-index: 5000;
+    display: none;
+    padding: 40px;
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+
+#launcher-view .app-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 30px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.app-icon-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.app-icon-container:hover {
+    transform: scale(1.05);
+}
+
+.app-icon {
+    width: 70px;
+    height: 70px;
+    background: #333;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    color: #eee;
+}
+
+.app-icon.editor-icon {
+    background: linear-gradient(135deg, #094771, #105781);
+}
+
+.app-name {
+    color: #ccc;
+    font-size: 14px;
+    text-align: center;
+    max-width: 100px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
