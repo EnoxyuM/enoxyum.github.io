@@ -33,16 +33,61 @@ function loadBasket() {
     }
 }
 
+// Launcher Storage logic updated for coordinates {id, x, y}
 function saveLauncherShortcuts(shortcuts) {
-    localStorage.setItem('codium_launcher_shortcuts', JSON.stringify(shortcuts));
+    localStorage.setItem('codium_launcher_shortcuts_v2', JSON.stringify(shortcuts));
 }
 
 function getLauncherShortcuts() {
     try {
-        return JSON.parse(localStorage.getItem('codium_launcher_shortcuts')) || [];
+        let data = JSON.parse(localStorage.getItem('codium_launcher_shortcuts_v2'));
+        
+        // Migration from old array [id1, id2] to objects [{id: id1, x:0, y:0}, ...]
+        if (!data) {
+            const oldData = JSON.parse(localStorage.getItem('codium_launcher_shortcuts'));
+            if (Array.isArray(oldData)) {
+                data = oldData.map((id, index) => ({
+                    id: id,
+                    x: index % 6, // simple wrap for migration
+                    y: Math.floor(index / 6)
+                }));
+                // Force add editor if not present
+                if (!data.some(i => i.id === 'editor')) {
+                    data.unshift({ id: 'editor', x: 0, y: 0 });
+                }
+            } else {
+                data = [{ id: 'editor', x: 0, y: 0 }];
+            }
+            saveLauncherShortcuts(data);
+        }
+        return data;
     } catch(e) {
-        return [];
+        return [{ id: 'editor', x: 0, y: 0 }];
     }
+}
+
+function addProjectToLauncher(projectId) {
+    const shortcuts = getLauncherShortcuts();
+    if (shortcuts.some(s => s.id === projectId)) return false;
+
+    // Find first free slot
+    let x = 0, y = 0;
+    const maxCols = Math.floor(window.innerWidth / 100); 
+    
+    while (true) {
+        if (!shortcuts.some(s => s.x === x && s.y === y)) {
+            break;
+        }
+        y++;
+        if (y > 10) { // arbitrary row limit for search, reset to next col
+             y = 0;
+             x++;
+        }
+    }
+
+    shortcuts.push({ id: projectId, x, y });
+    saveLauncherShortcuts(shortcuts);
+    return true;
 }
 
 async function renderBasketView() {
@@ -564,15 +609,13 @@ async function loadSavedCodes() {
         button.addEventListener('mousedown', (e) => {
             if (e.button === 0) { // Left click
                 pressTimer = setTimeout(() => {
-                    const shortcuts = getLauncherShortcuts();
-                    if (!shortcuts.includes(project.id)) {
-                        shortcuts.push(project.id);
-                        saveLauncherShortcuts(shortcuts);
+                    const added = addProjectToLauncher(project.id);
+                    if (added) {
                         showNotification(`Added "${project.name || 'Project'}" to Launcher`);
                     } else {
                         showNotification(`"${project.name || 'Project'}" is already in Launcher`);
                     }
-                    pressTimer = null; // Consume the event
+                    pressTimer = null;
                 }, 800); // 800ms for long press
             } else if (e.button === 1) { // Middle click delete
                  e.preventDefault();
