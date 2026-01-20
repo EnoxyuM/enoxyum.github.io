@@ -4,10 +4,12 @@ if (!isPreviewMode) {
     setupShortcuts();
     setupDragDrop();
 
-    editorElement.style.display = 'block'; 
+    editorElement.style.display = 'none'; 
+    document.getElementById('file-tabs').style.display = 'none';
+    document.querySelector('.live-update-switch').style.display = 'none';
+
     consoleElem.style.display = 'none'; 
     scene.style.zIndex = '0'; 
-    editor.focus(); 
     editorElement.style.pointerEvents = 'auto'; 
     scene.style.pointerEvents = 'none'; 
     showingEditor = true;
@@ -16,8 +18,17 @@ if (!isPreviewMode) {
         loadBasket();
         if (await loadFromUrlHash()) {
             loadColors();
+            editorElement.style.display = 'block'; 
+            document.getElementById('file-tabs').style.display = 'flex';
+            document.querySelector('.live-update-switch').style.display = 'block';
+            editor.refresh();
+            editor.focus();
             return;
         }
+
+        loadColors();
+        toggleLauncher();
+
         const lastOpenedIdStr = localStorage.getItem('lastOpenedProjectId');
         if (lastOpenedIdStr) {
             const lastOpenedId = parseInt(lastOpenedIdStr, 10);
@@ -25,7 +36,6 @@ if (!isPreviewMode) {
             request.onsuccess = e => {
                 if (e.target.result) { 
                     loadProject(lastOpenedId); 
-                    loadColors(); 
                 } else { 
                     localStorage.removeItem('lastOpenedProjectId'); 
                     loadFallbackProject(); 
