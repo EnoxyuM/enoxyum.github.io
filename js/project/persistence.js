@@ -33,6 +33,18 @@ function loadBasket() {
     }
 }
 
+function saveLauncherShortcuts(shortcuts) {
+    localStorage.setItem('codium_launcher_shortcuts', JSON.stringify(shortcuts));
+}
+
+function getLauncherShortcuts() {
+    try {
+        return JSON.parse(localStorage.getItem('codium_launcher_shortcuts')) || [];
+    } catch(e) {
+        return [];
+    }
+}
+
 async function renderBasketView() {
     const basketView = menu.querySelector('#basket-view');
     const projectList = menu.querySelector('#project-list');
@@ -547,10 +559,56 @@ async function loadSavedCodes() {
         button.appendChild(textContainer);
         button.appendChild(arrow);
         
-        button.onclick = async () => {
-            if (currentProjectId !== project.id) await loadProject(project.id);
-            else renderVersionList(project.id, await getCodes());
-        };
+        let pressTimer;
+
+        button.addEventListener('mousedown', (e) => {
+            if (e.button === 0) { // Left click
+                pressTimer = setTimeout(() => {
+                    const shortcuts = getLauncherShortcuts();
+                    if (!shortcuts.includes(project.id)) {
+                        shortcuts.push(project.id);
+                        saveLauncherShortcuts(shortcuts);
+                        showNotification(`Added "${project.name || 'Project'}" to Launcher`);
+                    } else {
+                        showNotification(`"${project.name || 'Project'}" is already in Launcher`);
+                    }
+                    pressTimer = null; // Consume the event
+                }, 800); // 800ms for long press
+            } else if (e.button === 1) { // Middle click delete
+                 e.preventDefault();
+                 (async () => {
+                    await handleMainProjectDeletion(project, await getCodes());
+                    project.inTrash = true;
+                    await updateCode(project);
+                    
+                    const updatedCurrentProject = (await getCodes()).find(p => p.id === currentProjectId);
+
+                    if (currentProjectId === project.id || (updatedCurrentProject && updatedCurrentProject.parentId === project.id)) {
+                        currentProjectId = null;
+                        localStorage.removeItem('lastOpenedProjectId');
+                        loadFallbackProject();
+                    } else {
+                        loadSavedCodes();
+                    }
+                })();
+            }
+        });
+
+        button.addEventListener('mouseup', (e) => {
+             if (e.button === 0 && pressTimer) {
+                clearTimeout(pressTimer);
+                // Normal click action
+                (async () => {
+                    if (currentProjectId !== project.id) await loadProject(project.id);
+                    else renderVersionList(project.id, await getCodes());
+                })();
+             }
+        });
+
+        button.addEventListener('mouseleave', () => {
+            if (pressTimer) clearTimeout(pressTimer);
+        });
+        
         button.oncontextmenu = e => {
             e.preventDefault();
             showInlineInput({
@@ -569,25 +627,7 @@ async function loadSavedCodes() {
                 }
             });
         };
-        button.onmousedown = async (e) => {
-            if (e.button === 1) {
-                e.preventDefault();
-                await handleMainProjectDeletion(project, await getCodes());
 
-                project.inTrash = true;
-                await updateCode(project);
-                
-                const updatedCurrentProject = (await getCodes()).find(p => p.id === currentProjectId);
-
-                if (currentProjectId === project.id || (updatedCurrentProject && updatedCurrentProject.parentId === project.id)) {
-                    currentProjectId = null;
-                    localStorage.removeItem('lastOpenedProjectId');
-                    loadFallbackProject();
-                } else {
-                    loadSavedCodes();
-                }
-            }
-        };
         if (project.id === currentProjectId || (currentProject && currentProject.parentId === project.id)) button.classList.add('selected');
         projectList.appendChild(button);
     });
