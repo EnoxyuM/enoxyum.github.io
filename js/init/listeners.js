@@ -17,6 +17,7 @@ function setupEventListeners() {
     window.addEventListener('beforeunload', e => e.stopImmediatePropagation());
 
     projectTitle.addEventListener('click', toggleFilePanel);
+    menuBtn.addEventListener('click', toggleMenu);
     
     const addFileBtn = document.getElementById('add-file-btn');
     addFileBtn.onclick = () => createNewItem(false, '');
