@@ -19,6 +19,8 @@ const pasteProjectBtn = document.getElementById('paste-project-btn');
 const menuBtn = document.getElementById('menu-btn');
 const inlineInputContainer = document.getElementById('inline-input-container');
 const inlineInputField = document.getElementById('inline-input-field');
+const launcherBtn = document.getElementById('launcher-btn');
+const launcherView = document.getElementById('launcher-view');
 
 let editor;
 let files = {};
@@ -31,6 +33,7 @@ let versionListParentId = null;
 const blobUrls = [];
 let db;
 let basket = [];
+let isLauncherMode = false;
 
 const DB_NAME = 'CodeEditorDB_Projects', DB_VERSION = 1, STORE_NAME = 'projects';
 
@@ -41,4 +44,4 @@ const ALPHABET_MAP = new Map(URL_ALPHABET.split('').map((c, i) => [c, BigInt(i)]
 let currentMediaBlobUrl = null;
 let forceOpenAsText = new Set();
 let altPressed = false, shiftAltPressed = false;
-let showingEditor = false, showingConsole = false; 
+let showingEditor = false, showingConsole = false;
