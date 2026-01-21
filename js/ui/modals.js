@@ -194,7 +194,9 @@ async function renderLauncher() {
                     document.querySelector('.live-update-switch').style.display = 'block';
                     if (scene) scene.style.pointerEvents = 'none';
                     editor.refresh();
-                    updateScene();
+                    if (liveUpdateToggle.checked) {
+                        updateScene();
+                    }
                 };
                 container.onmousedown = null;
             }
