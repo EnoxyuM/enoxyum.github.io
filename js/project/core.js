@@ -52,7 +52,7 @@ function initializeEditorWithFiles(fileSet, loadedOpenTabs, lastActiveFile) {
     }
     
     renderAll();
-    if (!isPreviewMode && liveUpdateToggle.checked) {
+    if (!isPreviewMode && liveUpdateToggle.checked && launcherView.style.display !== 'block') {
         updateScene();
     }
 }
