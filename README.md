@@ -4,7 +4,10 @@
   </h1>
 </div>
 
-I did changed shortcut for Switching between code editing and preview from Alt to Ctrl+Alt since it was conflicting with Alt+Tab a lot
+Updates:
+I did changed shortcut for Switching between code editing and preview from Alt to Ctrl+Alt since it was conflicting with Alt+Tab a lot.
+
+Added a launcher - it's like a PC's desktop with shortcut fast launching your projects directly.
 
 ## ⌨️ Keyboard & Mouse Shortcuts
 
@@ -32,6 +35,7 @@ I did changed shortcut for Switching between code editing and preview from Alt t
 | **Left Click** | Load project |
 | **Middle Click** | Move project to Basket |
 | **Right Click** | Rename project |
+| **✨NEW!✨ Hold Left Click** | Create project's shortcut in launcher |
 
 ### Project files Menu (Click on 📁Project name to open)
 | Action | Description |
