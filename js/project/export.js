@@ -24,7 +24,11 @@ async function exportProjectAsZip(projectId) {
                         const a = document.createElement("a");
                         const url = URL.createObjectURL(content);
                         a.href = url;
-                        const projectName = (project.name || `project-${project.id}`).replace(/[\\/:*?"<>|]/g, '_');
+                        let projectName = (project.name || `project-${project.id}`).replace(/[\\/:*?"<>|]/g, '_');
+                        if (project.version) {
+                            const versionNumber = project.version.substring(1).trim().replace(/[\\/:*?"<>|]/g, '_');
+                            projectName += `(${versionNumber})`;
+                        }
                         a.download = `${projectName}.zip`;
                         document.body.appendChild(a);
                         a.click();
@@ -57,7 +61,11 @@ async function exportAllProjectsAsZip() {
 
         for (const project of allProjects) {
             if (project && project.files) {
-                const folderName = (project.name || `project-${project.id}`).replace(/[\\/:*?"<>|]/g, '_');
+                let folderName = (project.name || `project-${project.id}`).replace(/[\\/:*?"<>|]/g, '_');
+                if (project.version) {
+                    const versionNumber = project.version.substring(1).trim().replace(/[\\/:*?"<>|]/g, '_');
+                    folderName += `(${versionNumber})`;
+                }
                 const projectFolder = zip.folder(folderName);
                 
                 for (const filename in project.files) {
