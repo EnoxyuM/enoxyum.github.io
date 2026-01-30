@@ -34,6 +34,7 @@ const blobUrls = [];
 let db;
 let basket = [];
 let isLauncherMode = false;
+let showExportArrows = false;
 
 const DB_NAME = 'CodeEditorDB_Projects', DB_VERSION = 1, STORE_NAME = 'projects';
 
