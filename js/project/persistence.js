@@ -572,6 +572,9 @@ async function loadSavedCodes() {
     </div>
     <div id="version-list-container" style="display: none;"></div>`;
     const projectList = menu.querySelector('#project-list');
+    if (showExportArrows) {
+        projectList.classList.add('show-export-arrows');
+    }
     const basketView = menu.querySelector('#basket-view');
 
     mainProjects.forEach(project => {
@@ -686,7 +689,10 @@ async function loadSavedCodes() {
 
     document.getElementById('saveBtn').onclick = () => saveCurrentCode(false);
     document.getElementById('newVerBtn').onclick = createNewVersion;
-    document.getElementById('exportToggleBtn').onclick = () => projectList.classList.toggle('show-export-arrows');
+    document.getElementById('exportToggleBtn').onclick = () => {
+        showExportArrows = !showExportArrows;
+        projectList.classList.toggle('show-export-arrows', showExportArrows);
+    };
     document.getElementById('exportAllBtn').onclick = exportAllProjectsAsZip;
     document.getElementById('importProjectBtn').onclick = importProject;
     document.getElementById('importFolderBtn').onclick = importProjectFolder;
