@@ -46,3 +46,7 @@ let currentMediaBlobUrl = null;
 let forceOpenAsText = new Set();
 let altPressed = false, shiftAltPressed = false;
 let showingEditor = false, showingConsole = false;
+
+let isDbDirty = true;
+let cachedTotalSize = 0;
+let cachedProjectsCount = 0;
