@@ -111,4 +111,28 @@ function toggleEditor() {
 }
 function toggleConsole() { consoleElem.style.display = showingConsole ? 'none' : 'block'; showingConsole = !showingConsole; }
 
-function updateFileInfo() { if (isPreviewMode) return; getCodes().then(projects => { const totalSize = projects.reduce((acc, p) => acc + JSON.stringify(p.files).length, 0); const fileInfoEl = document.getElementById('fileInfo'); if(fileInfoEl) fileInfoEl.textContent = `${(totalSize/1024).toFixed(2)} KB, Projects: ${projects.length}`; }); }
+function updateFileInfo() {
+    if (isPreviewMode) return;
+    getCodes().then(projects => {
+        const totalSize = projects.reduce((acc, p) => {
+            let projectSize = 0;
+            if (p.files) {
+                for (const path in p.files) {
+                    const f = p.files[path];
+                    if (f) {
+                        if (f.isBinary && f.content) {
+                            projectSize += f.content.byteLength || f.content.length || 0;
+                        } else if (f.code) {
+                            projectSize += f.code.length;
+                        }
+                    }
+                }
+            }
+            return acc + projectSize;
+        }, 0);
+        const fileInfoEl = document.getElementById('fileInfo');
+        if (fileInfoEl) {
+            fileInfoEl.textContent = `${(totalSize / 1024).toFixed(2)} KB, Projects: ${projects.length}`;
+        }
+    });
+}
