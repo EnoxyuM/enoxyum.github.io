@@ -268,6 +268,7 @@ async function saveCurrentCode(overwrite = false) {
     const now = new Date();
 
     if (overwrite && currentProjectId !== null) {
+        isDbDirty = true;
         await new Promise((resolve, reject) => {
             const tx = db.transaction([STORE_NAME], 'readwrite');
             const store = tx.objectStore(STORE_NAME);
@@ -296,6 +297,7 @@ async function saveCurrentCode(overwrite = false) {
             };
         });
     } else {
+        isDbDirty = true;
         const pad = (num, size) => String(num).padStart(size, '0');
         const name = `${pad(now.getDate(), 2)}.${pad(now.getMonth() + 1, 2)}.${now.getFullYear()} ${pad(now.getHours(), 2)}:${pad(now.getMinutes(), 2)}:${pad(now.getSeconds(), 2)} ${pad(now.getMilliseconds(), 3)}`;
         const newProject = {
