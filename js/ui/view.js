@@ -113,6 +113,14 @@ function toggleConsole() { consoleElem.style.display = showingConsole ? 'none' :
 
 function updateFileInfo() {
     if (isPreviewMode) return;
+    const fileInfoEl = document.getElementById('fileInfo');
+    if (!fileInfoEl) return;
+
+    if (!isDbDirty) {
+        fileInfoEl.textContent = `${(cachedTotalSize / 1024).toFixed(2)} KB, Projects: ${cachedProjectsCount}`;
+        return;
+    }
+
     getCodes().then(projects => {
         const totalSize = projects.reduce((acc, p) => {
             let projectSize = 0;
@@ -130,9 +138,11 @@ function updateFileInfo() {
             }
             return acc + projectSize;
         }, 0);
-        const fileInfoEl = document.getElementById('fileInfo');
-        if (fileInfoEl) {
-            fileInfoEl.textContent = `${(totalSize / 1024).toFixed(2)} KB, Projects: ${projects.length}`;
-        }
+        
+        cachedTotalSize = totalSize;
+        cachedProjectsCount = projects.length;
+        isDbDirty = false;
+        
+        fileInfoEl.textContent = `${(totalSize / 1024).toFixed(2)} KB, Projects: ${projects.length}`;
     });
 }
