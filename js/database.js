@@ -16,6 +16,7 @@ function openDB() {
 }
 
 function saveCode(p) {
+    isDbDirty = true;
     return new Promise((res, rej) => {
         const r = db.transaction([STORE_NAME], 'readwrite').objectStore(STORE_NAME).add(p);
         r.onsuccess = e => res(e.target.result);
@@ -24,6 +25,7 @@ function saveCode(p) {
 }
 
 function updateCode(p) {
+    isDbDirty = true;
     return new Promise((res, rej) => {
         const r = db.transaction([STORE_NAME], 'readwrite').objectStore(STORE_NAME).put(p);
         r.onsuccess = e => res(e.target.result);
@@ -32,6 +34,7 @@ function updateCode(p) {
 }
 
 function deleteCode(id) {
+    isDbDirty = true;
     return new Promise((res, rej) => {
         const r = db.transaction([STORE_NAME], 'readwrite').objectStore(STORE_NAME).delete(id);
         r.onsuccess = () => res();
