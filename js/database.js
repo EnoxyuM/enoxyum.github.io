@@ -1,43 +1,66 @@
 function openDB() {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
+
         request.onupgradeneeded = e => {
             db = e.target.result;
             if (!db.objectStoreNames.contains(STORE_NAME)) {
                 db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
             }
         };
+
         request.onsuccess = e => {
             db = e.target.result;
             resolve(db);
         };
+
         request.onerror = e => reject('Error opening database');
     });
 }
 
 function saveCode(p) {
     isDbDirty = true;
+
     return new Promise((res, rej) => {
         const r = db.transaction([STORE_NAME], 'readwrite').objectStore(STORE_NAME).add(p);
-        r.onsuccess = e => res(e.target.result);
+
+        r.onsuccess = e => {
+            const id = e.target.result;
+            p.id = id;
+            upsertProjectMeta(p, true);
+            res(id);
+        };
+
         r.onerror = e => rej('Error saving project');
     });
 }
 
 function updateCode(p) {
     isDbDirty = true;
+
     return new Promise((res, rej) => {
         const r = db.transaction([STORE_NAME], 'readwrite').objectStore(STORE_NAME).put(p);
-        r.onsuccess = e => res(e.target.result);
+
+        r.onsuccess = e => {
+            upsertProjectMeta(p, true);
+            res(e.target.result);
+        };
+
         r.onerror = e => rej('Error updating project');
     });
 }
 
 function deleteCode(id) {
     isDbDirty = true;
+
     return new Promise((res, rej) => {
         const r = db.transaction([STORE_NAME], 'readwrite').objectStore(STORE_NAME).delete(id);
-        r.onsuccess = () => res();
+
+        r.onsuccess = () => {
+            removeProjectMeta(id);
+            res();
+        };
+
         r.onerror = () => rej('Error deleting project');
     });
 }
@@ -45,14 +68,77 @@ function deleteCode(id) {
 function getCodes() {
     return new Promise((res, rej) => {
         const r = db.transaction([STORE_NAME], 'readonly').objectStore(STORE_NAME).getAll();
-        r.onsuccess = e => res(e.target.result);
+
+        r.onsuccess = e => {
+            const projects = e.target.result;
+
+            if (Array.isArray(projects)) {
+                projects.forEach(project => {
+                    upsertProjectMeta(project, true);
+                });
+            }
+
+            res(projects);
+        };
+
         r.onerror = e => rej('Error getting projects');
     });
+}
+
+function getAllProjectKeys() {
+    return new Promise(resolve => {
+        try {
+            const tx = db.transaction([STORE_NAME], 'readonly');
+            const store = tx.objectStore(STORE_NAME);
+            const request = store.openKeyCursor(null, 'next');
+            const keys = [];
+
+            request.onsuccess = e => {
+                const cursor = e.target.result;
+                if (cursor) {
+                    keys.push(cursor.primaryKey);
+                    cursor.continue();
+                } else {
+                    resolve(keys);
+                }
+            };
+
+            request.onerror = () => resolve(keys);
+        } catch (e) {
+            resolve([]);
+        }
+    });
+}
+
+async function ensureProjectMetaCacheReady() {
+    if (projectMetaReady) return;
+
+    try {
+        const keys = await getAllProjectKeys();
+        const keySet = new Set(keys);
+
+        for (const id of Array.from(projectMetaCache.keys())) {
+            if (!keySet.has(id)) {
+                projectMetaCache.delete(id);
+            }
+        }
+
+        keys.forEach(id => {
+            addPlaceholderProjectMeta(id);
+        });
+
+        saveProjectMetaCache();
+        projectMetaReady = true;
+        localStorage.setItem('codium_project_meta_ready', 'true');
+    } catch (e) {
+        console.error('Could not prepare project meta cache', e);
+    }
 }
 
 function uploadFiles(fileList, basePath) {
     const filesToProcess = Array.from(fileList);
     let remaining = filesToProcess.length;
+
     if (remaining === 0) return;
 
     const onDone = () => {
@@ -75,7 +161,7 @@ function uploadFiles(fileList, basePath) {
             const nameParts = originalName.split('.');
             const extension = nameParts.length > 1 ? '.' + nameParts.pop() : '';
             const baseName = nameParts.join('.');
-            
+
             do {
                 finalName = `${baseName}(${counter})${extension}`;
                 finalPath = (basePath ? `${basePath}/${finalName}` : finalName).replace(/^\//, '');
@@ -105,6 +191,7 @@ function uploadFiles(fileList, basePath) {
                     content: compressed,
                 };
             }
+
             remaining--;
             if (remaining === 0) onDone();
         };

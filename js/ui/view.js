@@ -24,15 +24,19 @@ function updateEditorView(filepath) {
 
     if (fileData.isBinary && !openAsText) {
         const mime = fileData.mimeType.toLowerCase();
+
         if (mime.startsWith('image/') || mime.startsWith('video/') || mime.startsWith('audio/')) {
             cmElement.style.display = 'none';
             mediaPreviewElement.style.display = 'flex';
             mediaPreviewElement.innerHTML = '';
+
             try {
                 const decompressed = pako.ungzip(fileData.content);
                 const blob = new Blob([decompressed], { type: fileData.mimeType });
                 currentMediaBlobUrl = URL.createObjectURL(blob);
+
                 let mediaElement;
+
                 if (mime.startsWith('image/')) {
                     mediaElement = document.createElement('img');
                 } else if (mime.startsWith('video/')) {
@@ -42,6 +46,7 @@ function updateEditorView(filepath) {
                     mediaElement = document.createElement('audio');
                     mediaElement.controls = true;
                 }
+
                 mediaElement.src = currentMediaBlobUrl;
                 mediaPreviewElement.appendChild(mediaElement);
             } catch (e) {
@@ -49,25 +54,31 @@ function updateEditorView(filepath) {
                 cmElement.style.display = 'block';
                 mediaPreviewElement.style.display = 'none';
                 editor.setOption("readOnly", true);
-                editor.swapDoc(CodeMirror.Doc(`// Error displaying binary file: ${filepath}\n// ${e.message}`, 'text/plain'));
+                editor.swapDoc(CodeMirror.Doc(`// Error displaying binary file: ${filepath}
+// ${e.message}`, 'text/plain'));
             }
         } else {
             cmElement.style.display = 'block';
             mediaPreviewElement.style.display = 'none';
             editor.setOption("readOnly", true);
-            editor.swapDoc(CodeMirror.Doc(`// Binary file: ${filepath}\n// Cannot be edited.`, 'text/plain'));
+            editor.swapDoc(CodeMirror.Doc(`// Binary file: ${filepath}
+// Cannot be edited.`, 'text/plain'));
         }
     } else {
         cmElement.style.display = 'block';
         mediaPreviewElement.style.display = 'none';
+
         if (openAsText) {
             let content;
+
             try {
                 const decompressed = pako.ungzip(fileData.content);
                 content = new TextDecoder('utf-8', { fatal: false }).decode(decompressed);
             } catch (e) {
-                content = `// Error reading binary file as text: ${filepath}\n// ${e.message}`;
+                content = `// Error reading binary file as text: ${filepath}
+// ${e.message}`;
             }
+
             editor.swapDoc(CodeMirror.Doc(content, 'text/plain'));
             editor.setOption("readOnly", true);
         } else {
@@ -75,24 +86,32 @@ function updateEditorView(filepath) {
             editor.setOption("readOnly", false);
             editor.setOption('mode', getModeForFilename(activeFilePath));
         }
+
         editor.focus();
     }
 }
 
-function logToConsole(type, content) { 
-  if (isPreviewMode) {
-      console[type === 'error' ? 'error' : 'log'](`[Preview] ${content}`);
-      return;
-  }
-  const logElem = document.createElement('div'); logElem.className = type; logElem.textContent = content; consoleElem.appendChild(logElem); consoleElem.scrollTop = consoleElem.scrollHeight; 
+function logToConsole(type, content) {
+    if (isPreviewMode) {
+        console[type === 'error' ? 'error' : 'log'](`[Preview] ${content}`);
+        return;
+    }
+
+    const logElem = document.createElement('div');
+    logElem.className = type;
+    logElem.textContent = content;
+    consoleElem.appendChild(logElem);
+    consoleElem.scrollTop = consoleElem.scrollHeight;
 }
 
-function toggleEditor() {
+async function toggleEditor() {
     if (showingEditor) {
         editorElement.style.display = 'none';
         document.getElementById('file-tabs').style.display = 'none';
         document.querySelector('.live-update-switch').style.display = 'none';
+
         if (filePanel.classList.contains('open')) toggleFilePanel();
+
         scene.focus();
         scene.style.zIndex = '5';
         editorElement.style.pointerEvents = 'none';
@@ -101,48 +120,48 @@ function toggleEditor() {
         editorElement.style.display = 'block';
         document.getElementById('file-tabs').style.display = 'flex';
         document.querySelector('.live-update-switch').style.display = 'block';
+
+        try {
+            if (typeof ensureEditorProjectLoaded === 'function') {
+                await ensureEditorProjectLoaded();
+            }
+        } catch (e) {
+            console.error('Could not load editor project:', e);
+        }
+
         updateProjectTitle();
         editor.focus();
+
         scene.style.zIndex = '0';
         editorElement.style.pointerEvents = 'auto';
         scene.style.pointerEvents = 'none';
     }
+
     showingEditor = !showingEditor;
 }
-function toggleConsole() { consoleElem.style.display = showingConsole ? 'none' : 'block'; showingConsole = !showingConsole; }
+
+function toggleConsole() {
+    consoleElem.style.display = showingConsole ? 'none' : 'block';
+    showingConsole = !showingConsole;
+}
 
 function updateFileInfo() {
     if (isPreviewMode) return;
+
     const fileInfoEl = document.getElementById('fileInfo');
     if (!fileInfoEl) return;
 
-    if (!isDbDirty) {
-        fileInfoEl.textContent = `${(cachedTotalSize / 1024).toFixed(2)} KB, Projects: ${cachedProjectsCount}`;
-        return;
-    }
+    let totalSize = 0;
+    let count = 0;
 
-    getCodes().then(projects => {
-        const totalSize = projects.reduce((acc, p) => {
-            let projectSize = 0;
-            if (p.files) {
-                for (const path in p.files) {
-                    const f = p.files[path];
-                    if (f) {
-                        if (f.isBinary && f.content) {
-                            projectSize += f.content.byteLength || f.content.length || 0;
-                        } else if (f.code) {
-                            projectSize += f.code.length;
-                        }
-                    }
-                }
-            }
-            return acc + projectSize;
-        }, 0);
-        
-        cachedTotalSize = totalSize;
-        cachedProjectsCount = projects.length;
-        isDbDirty = false;
-        
-        fileInfoEl.textContent = `${(totalSize / 1024).toFixed(2)} KB, Projects: ${projects.length}`;
+    projectMetaCache.forEach(meta => {
+        count++;
+        totalSize += meta.size || 0;
     });
+
+    cachedTotalSize = totalSize;
+    cachedProjectsCount = count;
+    isDbDirty = false;
+
+    fileInfoEl.textContent = `${(totalSize / 1024).toFixed(2)} KB, Projects: ${count}`;
 }
