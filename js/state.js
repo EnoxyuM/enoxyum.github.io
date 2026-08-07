@@ -34,130 +34,30 @@ let db;
 let basket = [];
 let isLauncherMode = false;
 let showExportArrows = false;
-const DB_NAME = 'CodeEditorDB_Projects', DB_VERSION = 1, STORE_NAME = 'projects';
+
+const DB_NAME = 'CodeEditorDB_Projects';
+const DB_VERSION = 2;
+const STORE_NAME = 'projects';
+const META_STORE_NAME = 'meta';
+
 const URL_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
 const BASE = BigInt(URL_ALPHABET.length);
 const ALPHABET_MAP = new Map(URL_ALPHABET.split('').map((c, i) => [c, BigInt(i)]));
+
 let currentMediaBlobUrl = null;
 let forceOpenAsText = new Set();
 let altPressed = false, shiftAltPressed = false;
 let showingEditor = false, showingConsole = false;
+
 let isDbDirty = true;
 let cachedTotalSize = 0;
 let cachedProjectsCount = 0;
 
 let projectContentLoaded = false;
+
 let projectMetaCache = new Map();
-let projectMetaReady = localStorage.getItem('codium_project_meta_ready') === 'true';
-
-function loadProjectMetaCache() {
-    try {
-        const arr = JSON.parse(localStorage.getItem('codium_project_meta_v1') || '[]');
-        projectMetaCache = new Map();
-        if (Array.isArray(arr)) {
-            arr.forEach(meta => {
-                if (meta && meta.id !== undefined) {
-                    projectMetaCache.set(meta.id, meta);
-                }
-            });
-        }
-    } catch (e) {
-        projectMetaCache = new Map();
-    }
-}
-
-function saveProjectMetaCache() {
-    try {
-        localStorage.setItem('codium_project_meta_v1', JSON.stringify(Array.from(projectMetaCache.values())));
-    } catch (e) {
-        console.error('Could not save project meta cache', e);
-    }
-}
-
-function computeProjectRecordSize(project) {
-    let size = 0;
-    if (!project || !project.files) return size;
-
-    for (const path in project.files) {
-        const f = project.files[path];
-        if (!f) continue;
-
-        if (f.isBinary && f.content) {
-            size += f.content.byteLength || f.content.length || 0;
-        } else if (f.code) {
-            size += f.code.length;
-        }
-    }
-
-    return size;
-}
-
-function addPlaceholderProjectMeta(id) {
-    if (getProjectMeta(id)) return;
-
-    projectMetaCache.set(id, {
-        id,
-        name: '',
-        date: 0,
-        createdDate: 0,
-        version: undefined,
-        parentId: undefined,
-        inTrash: false,
-        order: undefined,
-        size: 0,
-        known: false
-    });
-}
-
-function upsertProjectMeta(record, known = true) {
-    if (!record || record.id === undefined || record.id === null) return;
-
-    const id = record.id;
-    const existing = getProjectMeta(id) || {};
-
-    const meta = {
-        id,
-        name: known && record.name !== undefined ? record.name : (existing.name || ''),
-        date: known && record.date !== undefined ? record.date : (existing.date || 0),
-        createdDate: known && record.createdDate !== undefined
-            ? record.createdDate
-            : (existing.createdDate || record.date || 0),
-        version: known && record.version !== undefined ? record.version : existing.version,
-        parentId: known && record.parentId !== undefined ? record.parentId : existing.parentId,
-        inTrash: known && record.inTrash !== undefined ? record.inTrash : (existing.inTrash || false),
-        order: known && record.order !== undefined ? record.order : existing.order,
-        size: known && record.files ? computeProjectRecordSize(record) : (existing.size || 0),
-        known: known ? true : (existing.known || false)
-    };
-
-    projectMetaCache.set(id, meta);
-    saveProjectMetaCache();
-}
-
-function removeProjectMeta(id) {
-    let deleted = false;
-
-    if (projectMetaCache.has(id)) {
-        projectMetaCache.delete(id);
-        deleted = true;
-    }
-
-    const asNumber = Number(id);
-    if (!Number.isNaN(asNumber) && projectMetaCache.has(asNumber)) {
-        projectMetaCache.delete(asNumber);
-        deleted = true;
-    }
-
-    const asString = String(id);
-    if (projectMetaCache.has(asString)) {
-        projectMetaCache.delete(asString);
-        deleted = true;
-    }
-
-    if (deleted) {
-        saveProjectMetaCache();
-    }
-}
+let projectMetaHydrated = localStorage.getItem('codium_meta_hydrated_v2') === 'true';
+let metaHydrationPromise = null;
 
 function getProjectMeta(id) {
     if (projectMetaCache.has(id)) {
@@ -177,8 +77,138 @@ function getProjectMeta(id) {
     return null;
 }
 
-function getKnownMainProjectMetaList() {
-    return Array.from(projectMetaCache.values()).filter(meta => meta.known && !meta.parentId && !meta.inTrash);
+function setProjectMetaLocal(meta) {
+    if (!meta || meta.id === undefined || meta.id === null) return;
+    projectMetaCache.set(meta.id, meta);
 }
 
-loadProjectMetaCache();
+function removeProjectMetaLocal(id) {
+    projectMetaCache.delete(id);
+
+    const asNumber = Number(id);
+    if (!Number.isNaN(asNumber)) {
+        projectMetaCache.delete(asNumber);
+    }
+
+    projectMetaCache.delete(String(id));
+}
+
+function getAllProjectMeta() {
+    return Array.from(projectMetaCache.values()).filter(meta => meta && meta.id !== undefined);
+}
+
+function getMainProjectMetaList() {
+    return getAllProjectMeta().filter(meta => !meta.parentId && !meta.inTrash);
+}
+
+function getVersionProjectMetaList(parentId) {
+    return getAllProjectMeta().filter(meta => {
+        return meta.parentId !== undefined &&
+               meta.parentId !== null &&
+               String(meta.parentId) === String(parentId) &&
+               !meta.inTrash;
+    });
+}
+
+function getTrashedProjectMetaList() {
+    return getAllProjectMeta().filter(meta => !!meta.inTrash);
+}
+
+function sortProjectMetaList(list) {
+    const arr = [...list];
+
+    if (currentSortMode === 'free') {
+        arr.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity));
+    } else {
+        arr.sort((a, b) => {
+            const dateA = currentSortMode === 'created' ? (a.createdDate || a.date) : a.date;
+            const dateB = currentSortMode === 'created' ? (b.createdDate || b.date) : b.date;
+            return new Date(dateB || 0) - new Date(dateA || 0);
+        });
+    }
+
+    return arr;
+}
+
+function computeProjectRecordSize(project) {
+    let size = 0;
+
+    if (!project || !project.files) return size;
+
+    for (const path in project.files) {
+        const f = project.files[path];
+        if (!f) continue;
+
+        if (f.isBinary && f.content) {
+            size += f.content.byteLength || f.content.length || 0;
+        } else if (f.code) {
+            size += f.code.length;
+        }
+    }
+
+    return size;
+}
+
+function extractProjectMetaForSave(record) {
+    if (!record || record.id === undefined || record.id === null) return null;
+
+    return {
+        id: record.id,
+        name: record.name || '',
+        date: record.date || 0,
+        createdDate: record.createdDate || record.date || 0,
+        version: record.version ?? null,
+        parentId: record.parentId ?? null,
+        inTrash: !!record.inTrash,
+        order: record.order ?? null,
+        size: computeProjectRecordSize(record),
+        known: true
+    };
+}
+
+function extractProjectMetaForHydration(record) {
+    const base = extractProjectMetaForSave(record);
+    if (!base) return null;
+
+    const existing = getProjectMeta(record.id);
+
+    if (existing && existing.known) {
+        if (existing.name) {
+            base.name = existing.name;
+        }
+
+        if (existing.version !== undefined && existing.version !== null) {
+            base.version = existing.version;
+        }
+
+        if ('parentId' in existing) {
+            base.parentId = existing.parentId ?? null;
+        }
+
+        if (existing.inTrash !== undefined) {
+            base.inTrash = !!existing.inTrash;
+        }
+
+        if (existing.order !== undefined && existing.order !== null) {
+            base.order = existing.order;
+        }
+    }
+
+    return base;
+}
+
+function applyProjectMetaToRecord(record) {
+    if (!record || record.id === undefined || record.id === null) return record;
+
+    const meta = getProjectMeta(record.id);
+    if (!meta || !meta.known) return record;
+
+    if (meta.name !== undefined) record.name = meta.name;
+    if ('version' in meta) record.version = meta.version;
+    if ('parentId' in meta) record.parentId = meta.parentId;
+    if ('inTrash' in meta) record.inTrash = meta.inTrash;
+    if ('order' in meta) record.order = meta.order;
+    if (meta.createdDate) record.createdDate = meta.createdDate;
+
+    return record;
+}

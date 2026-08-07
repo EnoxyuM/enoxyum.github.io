@@ -13,11 +13,13 @@ function showInlineInput({ initialValue = '', placeholder = '', onSave, onCancel
 
     const handleSave = () => {
         const newValue = inlineInputField.value.trim();
+
         if (newValue) {
             onSave(newValue);
         } else {
             onCancel();
         }
+
         cleanup();
     };
 
@@ -119,6 +121,7 @@ async function renderLauncher() {
                 const targetItem = currentShortcuts[targetItemIndex];
                 targetItem.x = draggedLauncherItem.x;
                 targetItem.y = draggedLauncherItem.y;
+
                 currentShortcuts[sourceItemIndex].x = x;
                 currentShortcuts[sourceItemIndex].y = y;
             } else {
@@ -128,6 +131,7 @@ async function renderLauncher() {
 
             saveLauncherShortcuts(currentShortcuts);
             renderLauncher();
+
             draggedLauncherItem = null;
         };
     }
@@ -150,15 +154,18 @@ async function renderLauncher() {
 
         if (!container) {
             isNew = true;
+
             container = document.createElement('div');
             container.className = 'app-icon-container';
             container.draggable = true;
             container.dataset.id = itemIdStr;
+
             launcherView.appendChild(container);
 
             container.addEventListener('dragstart', (e) => {
                 const currentShortcuts = getLauncherShortcuts();
                 const freshItem = currentShortcuts.find(s => String(s.id) === itemIdStr);
+
                 draggedLauncherItem = freshItem || item;
 
                 const rect = container.getBoundingClientRect();
@@ -170,6 +177,7 @@ async function renderLauncher() {
                 }));
 
                 e.dataTransfer.effectAllowed = 'move';
+
                 setTimeout(() => container.classList.add('dragging'), 0);
             });
 
@@ -185,6 +193,7 @@ async function renderLauncher() {
         if (item.id === 'editor') {
             if (isNew || container.getAttribute('data-type') !== 'editor') {
                 container.setAttribute('data-type', 'editor');
+
                 container.innerHTML = `
                     <div class="app-icon editor-icon">📝</div>
                     <div class="app-name">Editor</div>
@@ -220,24 +229,25 @@ async function renderLauncher() {
         } else {
             const meta = getProjectMeta(item.id);
 
-            if (projectMetaReady && !meta) {
+            if (!meta) {
                 container.style.display = 'none';
                 return;
             }
 
-            if (meta && meta.inTrash) {
+            if (meta.inTrash) {
                 container.style.display = 'none';
                 return;
             }
 
             container.style.display = 'flex';
 
-            const projectName = item.name || (meta && meta.name) || `Project ${item.id}`;
+            const projectName = meta.name || `Project ${item.id}`;
 
             if (container.getAttribute('data-name') !== projectName || isNew) {
                 container.setAttribute('data-name', projectName);
 
                 const initials = (projectName || '?').substring(0, 2).toUpperCase();
+
                 const numericId = Number(item.id);
                 const hue = (Number.isFinite(numericId) ? numericId : 0) * 137.508 % 360;
                 const colorStyle = `hsl(${hue}, 60%, 40%)`;

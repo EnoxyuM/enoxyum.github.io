@@ -71,12 +71,23 @@ async function loadProject(projectId) {
             const project = e.target.result;
 
             if (project && project.files) {
-                upsertProjectMeta(project, true);
+                applyProjectMetaToRecord(project);
 
                 currentProjectId = project.id;
                 localStorage.setItem('lastOpenedProjectId', project.id);
 
-                initializeEditorWithFiles(project.files, project.openTabs || [], project.lastActiveFile);
+                const storedActive = localStorage.getItem(`codium_last_active_file_${project.id}`);
+                const lastActiveFile = storedActive !== null
+                    ? (storedActive || null)
+                    : project.lastActiveFile;
+
+                initializeEditorWithFiles(project.files, project.openTabs || [], lastActiveFile);
+
+                try {
+                    await syncProjectMetaFromRecord(project, 'save');
+                } catch (err) {
+                    console.error('Could not sync project meta:', err);
+                }
 
                 if (!isPreviewMode && menu.style.display === 'flex') {
                     await loadSavedCodes();
@@ -104,6 +115,7 @@ function updateProjectTitle() {
     }
 
     const meta = getProjectMeta(currentProjectId);
+
     const name = meta && meta.name ? meta.name : '';
     const version = meta && meta.version ? meta.version : '';
 
@@ -120,53 +132,30 @@ function updateProjectTitle() {
     checkOverflow();
 }
 
-function loadFallbackFromAllProjects() {
-    return getCodes().then(projects => {
-        if (projects.length > 0) {
-            if (currentSortMode === 'free') {
-                projects.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity));
-            } else {
-                projects.sort((a, b) => {
-                    const dateA = currentSortMode === 'created' ? (a.createdDate || a.date) : a.date;
-                    const dateB = currentSortMode === 'created' ? (b.createdDate || b.date) : b.date;
-                    return new Date(dateB) - new Date(dateA);
-                });
-            }
+async function loadFallbackProject() {
+    let mainMetas = getMainProjectMetaList().filter(meta => meta.known);
 
-            return loadProject(projects[0].id);
-        } else {
-            initializeEditorWithFiles({ 'index.html': { code: '', isBinary: false } }, ['index.html'], null);
-            return Promise.resolve();
+    if (mainMetas.length === 0) {
+        try {
+            await hydrateProjectMetadata(false);
+            mainMetas = getMainProjectMetaList().filter(meta => meta.known);
+        } catch (e) {
+            console.error('Metadata hydration failed:', e);
         }
-    });
-}
-
-function loadFallbackProject() {
-    const knownProjects = getKnownMainProjectMetaList();
-
-    if (knownProjects.length > 0) {
-        if (currentSortMode === 'free') {
-            knownProjects.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity));
-        } else {
-            knownProjects.sort((a, b) => {
-                const dateA = currentSortMode === 'created' ? (a.createdDate || a.date) : a.date;
-                const dateB = currentSortMode === 'created' ? (b.createdDate || b.date) : b.date;
-                return new Date(dateB) - new Date(dateA);
-            });
-        }
-
-        return loadProject(knownProjects[0].id)
-            .then(() => {
-                loadColors();
-            })
-            .catch(() => {
-                return loadFallbackFromAllProjects().then(() => {
-                    loadColors();
-                });
-            });
     }
 
-    return loadFallbackFromAllProjects().then(() => {
-        loadColors();
-    });
+    const sorted = sortProjectMetaList(mainMetas);
+
+    if (sorted.length > 0) {
+        try {
+            await loadProject(sorted[0].id);
+        } catch (e) {
+            console.error('Fallback project load error:', e);
+            initializeEditorWithFiles({ 'index.html': { code: '', isBinary: false } }, ['index.html'], null);
+        }
+    } else {
+        initializeEditorWithFiles({ 'index.html': { code: '', isBinary: false } }, ['index.html'], null);
+    }
+
+    loadColors();
 }

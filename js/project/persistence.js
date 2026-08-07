@@ -3,37 +3,45 @@ function compareVersions(vA, vB) {
     const partsA = parse(vA);
     const partsB = parse(vB);
     const len = Math.max(partsA.length, partsB.length);
+
     for (let i = 0; i < len; i++) {
         const numA = partsA[i] || 0;
         const numB = partsB[i] || 0;
+
         if (numA !== numB) {
-            return numB - numA; // Descending order
+            return numB - numA;
         }
     }
+
     return 0;
+}
+
+function updateBasketButtonText() {
+    const basketBtn = document.getElementById('basketBtn');
+    if (!basketBtn) return;
+
+    const trashedCount = getTrashedProjectMetaList().length;
+    basketBtn.textContent = `Basket(${basket.length + trashedCount})`;
 }
 
 function saveBasket() {
     localStorage.setItem('codium_basket', JSON.stringify(basket));
-    const basketBtn = document.getElementById('basketBtn');
-    if (basketBtn) {
-        basketBtn.textContent = `Basket(${basket.length})`;
-    }
+    updateBasketButtonText();
 }
 
 function loadBasket() {
     const storedBasket = localStorage.getItem('codium_basket');
+
     if (storedBasket) {
         try {
             basket = JSON.parse(storedBasket);
-        } catch(e) {
+        } catch (e) {
             console.error("Could not parse basket from localStorage", e);
             basket = [];
         }
     }
 }
 
-// Launcher Storage logic updated for coordinates {id, x, y}
 function saveLauncherShortcuts(shortcuts) {
     localStorage.setItem('codium_launcher_shortcuts_v2', JSON.stringify(shortcuts));
 }
@@ -41,104 +49,105 @@ function saveLauncherShortcuts(shortcuts) {
 function getLauncherShortcuts() {
     try {
         let data = JSON.parse(localStorage.getItem('codium_launcher_shortcuts_v2'));
-        
-        // Migration from old array [id1, id2] to objects [{id: id1, x:0, y:0}, ...]
+
         if (!data) {
             const oldData = JSON.parse(localStorage.getItem('codium_launcher_shortcuts'));
+
             if (Array.isArray(oldData)) {
                 data = oldData.map((id, index) => ({
                     id: id,
-                    x: index % 6, // simple wrap for migration
+                    x: index % 6,
                     y: Math.floor(index / 6)
                 }));
-                // Force add editor if not present
+
                 if (!data.some(i => i.id === 'editor')) {
                     data.unshift({ id: 'editor', x: 0, y: 0 });
                 }
             } else {
                 data = [{ id: 'editor', x: 0, y: 0 }];
             }
+
             saveLauncherShortcuts(data);
         }
+
         return data;
-    } catch(e) {
+    } catch (e) {
         return [{ id: 'editor', x: 0, y: 0 }];
     }
 }
 
 function addProjectToLauncher(projectId) {
     const shortcuts = getLauncherShortcuts();
+
     if (shortcuts.some(s => s.id === projectId)) return false;
 
-    // Find first free slot
     let x = 0, y = 0;
-    const maxCols = Math.floor(window.innerWidth / 100); 
-    
+
     while (true) {
         if (!shortcuts.some(s => s.x === x && s.y === y)) {
             break;
         }
+
         y++;
-        if (y > 10) { // arbitrary row limit for search, reset to next col
-             y = 0;
-             x++;
+
+        if (y > 10) {
+            y = 0;
+            x++;
         }
     }
 
     shortcuts.push({ id: projectId, x, y });
     saveLauncherShortcuts(shortcuts);
+
     return true;
 }
 
 async function renderBasketView() {
     const basketView = menu.querySelector('#basket-view');
     const projectList = menu.querySelector('#project-list');
+
     if (!basketView || !projectList) return;
-    
+
     projectList.style.display = 'none';
     basketView.style.display = 'block';
     basketView.innerHTML = '';
 
-    const allProjects = await getCodes();
-    const trashedProjects = allProjects.filter(p => p.inTrash);
-
+    const trashedProjects = getTrashedProjectMetaList();
     let contentAdded = false;
 
     if (trashedProjects.length > 0) {
         contentAdded = true;
-        trashedProjects.forEach(project => {
+
+        trashedProjects.forEach(meta => {
             const button = document.createElement('button');
             const textContainer = document.createElement('span');
-            let innerHtml = '';
-            if (project.name) {
-                innerHtml += `<span class="name">${project.name}</span>`;
-            }
-            innerHtml += formatDate(new Date(project.date));
-            textContainer.innerHTML = innerHtml;
+
+            const name = meta.name || `Project ${meta.id}`;
+            const dateText = meta.known && meta.date ? formatDate(new Date(meta.date)) : '';
+
+            textContainer.innerHTML = `<span class="name">${name}</span> ${dateText}`;
             button.appendChild(textContainer);
-            
+
             button.onclick = async () => {
-                project.inTrash = false;
-                await updateCode(project);
+                await updateProjectMetaOnly(meta.id, { inTrash: false });
                 await renderBasketView();
-                
-                const allProjects = await getCodes();
-                const trashedProjects = allProjects.filter(p => p.inTrash);
-                const basketBtn = document.getElementById('basketBtn');
-                if (basketBtn) {
-                    basketBtn.textContent = `Basket(${basket.length + trashedProjects.length})`;
-                }
+                updateBasketButtonText();
             };
+
             basketView.appendChild(button);
         });
     }
 
     if (basket.length > 0) {
         contentAdded = true;
+
         basket.forEach((item, index) => {
             const button = document.createElement('button');
-            let name = '', type = '';
-            switch(item.type) {
+
+            let name = '';
+            let type = '';
+
+            switch (item.type) {
                 case 'file':
                     name = item.path;
                     type = 'File';
@@ -148,7 +157,8 @@ async function renderBasketView() {
                     type = 'Folder';
                     break;
             }
-            if(type){
+
+            if (type) {
                 button.innerHTML = `<span class="name">${type}</span> ${name}`;
                 button.onclick = () => restoreItem(index);
                 basketView.appendChild(button);
@@ -159,17 +169,19 @@ async function renderBasketView() {
     if (!contentAdded) {
         basketView.innerHTML = '<div style="text-align: center; padding: 20px; color: #888;">Basket is empty.</div>';
     }
+
+    updateBasketButtonText();
 }
 
 function ensurePath(filePath) {
     const parts = filePath.split('/');
     let currentPath = '';
+
     for (let i = 0; i < parts.length - 1; i++) {
         currentPath = currentPath ? `${currentPath}/${parts[i]}` : parts[i];
         const placeholderPath = `${currentPath}/.p`;
-        
         const pathExists = Object.keys(files).some(p => p.startsWith(currentPath + '/'));
-        
+
         if (!pathExists && currentPath) {
             files[placeholderPath] = { code: '', doc: CodeMirror.Doc('', 'text/plain'), isBinary: false };
         }
@@ -180,7 +192,7 @@ async function restoreItem(index) {
     const item = basket[index];
     if (!item) return;
 
-    let itemName = item.path || (item.data && item.data.name);
+    const itemName = item.path || (item.data && item.data.name);
 
     switch (item.type) {
         case 'file':
@@ -188,25 +200,32 @@ async function restoreItem(index) {
                 showNotification(`Cannot restore: File '${item.path}' already exists.`);
                 return;
             }
+
             ensurePath(item.path);
+
             const mode = getModeForFilename(item.path);
             files[item.path] = { ...item.data, doc: CodeMirror.Doc(item.data.code || '', mode) };
+
             renderAll();
             openFile(item.path);
             break;
-            
+
         case 'folder':
             const existingFolder = Object.keys(files).some(p => p.startsWith(item.path + '/'));
+
             if (existingFolder) {
                 showNotification(`Cannot restore: Folder '${item.path}' or its contents already exist.`);
                 return;
             }
+
             ensurePath(item.path + '/.p');
+
             for (const filePath in item.files) {
                 const fileData = item.files[filePath];
                 const fileMode = getModeForFilename(filePath);
                 files[filePath] = { ...fileData, doc: CodeMirror.Doc(fileData.code || '', fileMode) };
             }
+
             openFolders.add(item.path);
             renderAll();
             break;
@@ -216,41 +235,28 @@ async function restoreItem(index) {
     saveBasket();
 
     await renderBasketView();
-
-    const allProjects = await getCodes();
-    const trashedProjects = allProjects.filter(p => p.inTrash);
-    const basketBtn = document.getElementById('basketBtn');
-    if (basketBtn) {
-        basketBtn.textContent = `Basket(${basket.length + trashedProjects.length})`;
-    }
+    updateBasketButtonText();
 
     showNotification(`Restored ${item.type} '${itemName}'.`);
 }
 
 async function saveActiveTab() {
-    if (currentProjectId === null || !db) {
-        return;
+    if (currentProjectId === null) return;
+
+    try {
+        localStorage.setItem(`codium_last_active_file_${currentProjectId}`, activeFilePath || '');
+    } catch (e) {
+        console.error('Could not save active tab:', e);
     }
-
-    const tx = db.transaction([STORE_NAME], 'readonly');
-    const store = tx.objectStore(STORE_NAME);
-    const getReq = store.get(currentProjectId);
-
-    getReq.onsuccess = e => {
-        const project = e.target.result;
-        if (project && project.lastActiveFile !== activeFilePath) {
-            project.lastActiveFile = activeFilePath;
-            updateCode(project).catch(err => console.error("Failed to save active tab state:", err));
-        }
-    };
 }
 
 async function saveCurrentCode(overwrite = false) {
     if (activeFilePath && files[activeFilePath] && !files[activeFilePath].isBinary) {
         files[activeFilePath].code = editor.getValue();
     }
-    
+
     const filesToSave = {};
+
     for (const filepath in files) {
         if (files[filepath].isBinary) {
             filesToSave[filepath] = {
@@ -265,41 +271,37 @@ async function saveCurrentCode(overwrite = false) {
             };
         }
     }
+
     const now = new Date();
 
     if (overwrite && currentProjectId !== null) {
-        isDbDirty = true;
-        await new Promise((resolve, reject) => {
-            const tx = db.transaction([STORE_NAME], 'readwrite');
-            const store = tx.objectStore(STORE_NAME);
-            const getReq = store.get(currentProjectId);
+        const meta = getProjectMeta(currentProjectId) || {};
 
-            getReq.onerror = reject;
+        const project = {
+            id: currentProjectId,
+            date: now,
+            createdDate: meta.createdDate || meta.date || now,
+            files: filesToSave,
+            openTabs: openTabs,
+            lastActiveFile: activeFilePath,
+            name: meta.name || '',
+            order: meta.order ?? Date.now(),
+            version: meta.version ?? null,
+            parentId: meta.parentId ?? null,
+            inTrash: !!meta.inTrash
+        };
 
-            getReq.onsuccess = e => {
-                const project = e.target.result;
-                if (project) {
-                    project.files = filesToSave;
-                    project.openTabs = openTabs;
-                    project.lastActiveFile = activeFilePath;
-                    project.date = now;
-                    
-                    const updateReq = store.put(project);
-                    updateReq.onsuccess = () => {
-                        localStorage.setItem('lastOpenedProjectId', currentProjectId);
-                        loadSavedCodes();
-                        resolve();
-                    };
-                    updateReq.onerror = reject;
-                } else {
-                    resolve();
-                }
-            };
-        });
+        await updateCode(project);
+
+        localStorage.setItem('lastOpenedProjectId', currentProjectId);
+
+        if (menu.style.display === 'flex') {
+            await loadSavedCodes();
+        }
     } else {
-        isDbDirty = true;
         const pad = (num, size) => String(num).padStart(size, '0');
         const name = `${pad(now.getDate(), 2)}.${pad(now.getMonth() + 1, 2)}.${now.getFullYear()} ${pad(now.getHours(), 2)}:${pad(now.getMinutes(), 2)}:${pad(now.getSeconds(), 2)} ${pad(now.getMilliseconds(), 3)}`;
+
         const newProject = {
             date: now,
             createdDate: now,
@@ -307,13 +309,22 @@ async function saveCurrentCode(overwrite = false) {
             openTabs: openTabs,
             lastActiveFile: activeFilePath,
             name: name,
-            order: Date.now()
+            order: Date.now(),
+            version: null,
+            parentId: null,
+            inTrash: false
         };
+
         const id = await saveCode(newProject);
+
         currentProjectId = id;
         localStorage.setItem('lastOpenedProjectId', currentProjectId);
-        await loadSavedCodes();
+
+        if (menu.style.display === 'flex') {
+            await loadSavedCodes();
+        }
     }
+
     updateProjectTitle();
 }
 
@@ -326,55 +337,67 @@ async function createNewVersion() {
     if (activeFilePath && files[activeFilePath] && !files[activeFilePath].isBinary) {
         files[activeFilePath].code = editor.getValue();
     }
+
     const filesToSave = {};
+
     for (const filepath in files) {
         if (files[filepath].isBinary) {
-            filesToSave[filepath] = { isBinary: true, content: files[filepath].content, mimeType: files[filepath].mimeType };
+            filesToSave[filepath] = {
+                isBinary: true,
+                content: files[filepath].content,
+                mimeType: files[filepath].mimeType
+            };
         } else {
-            filesToSave[filepath] = { code: files[filepath].code, isBinary: false };
+            filesToSave[filepath] = {
+                code: files[filepath].code,
+                isBinary: false
+            };
         }
     }
 
-    const allProjects = await getCodes();
-    const currentProject = allProjects.find(p => p.id === currentProjectId);
+    const currentProject = await getProjectRecord(currentProjectId);
 
     if (!currentProject) {
         showNotification("Could not find current project to version.");
         return;
     }
 
+    applyProjectMetaToRecord(currentProject);
+
     const now = new Date();
-    
+
     if (currentProject.parentId) {
         const parentId = currentProject.parentId;
-        const versionsOfParent = allProjects.filter(p => p.parentId === parentId);
+        const versionsOfParent = getVersionProjectMetaList(parentId);
 
-        const versionParts = currentProject.version.substring(1).trim().split('.').map(Number);
+        const currentVersion = currentProject.version || 'v 0';
+        const versionParts = currentVersion.substring(1).trim().split('.').map(Number);
+
         const nextSiblingParts = [...versionParts];
         nextSiblingParts[nextSiblingParts.length - 1]++;
-        const nextSiblingVersionString = 'v ' + nextSiblingParts.join('.');
 
+        const nextSiblingVersionString = 'v ' + nextSiblingParts.join('.');
         const nextSiblingExists = versionsOfParent.some(p => p.version === nextSiblingVersionString);
 
         let newVersionString;
 
         if (nextSiblingExists) {
-            // Create a sub-version of the current version (e.g., v 1.1 -> v 1.1.1)
-            let subVersionBase = currentProject.version;
+            let subVersionBase = currentVersion;
             let subVersionCounter = 1;
-            
+
             while (true) {
                 const potentialVersion = `${subVersionBase}.${subVersionCounter}`;
                 const exists = versionsOfParent.some(p => p.version === potentialVersion);
+
                 if (!exists) {
                     newVersionString = potentialVersion;
                     break;
                 }
-                subVersionBase = potentialVersion; // For the next iteration, check v 1.1.1.1 and so on
-                subVersionCounter = 1; // Reset counter for the new deeper level
+
+                subVersionBase = potentialVersion;
+                subVersionCounter = 1;
             }
         } else {
-            // Create the next logical sibling version (e.g., v 1.1 -> v 1.2)
             newVersionString = nextSiblingVersionString;
         }
 
@@ -387,55 +410,71 @@ async function createNewVersion() {
             name: currentProject.name,
             order: Date.now(),
             parentId: parentId,
-            version: newVersionString
+            version: newVersionString,
+            inTrash: false
         };
+
         const newId = await saveCode(newVersionProject);
         await loadProject(newId);
+
         return;
     }
 
-    // This part is for creating the first version from a main project
     const historicalVersion = {
         date: currentProject.date,
-        createdDate: currentProject.createdDate,
+        createdDate: currentProject.createdDate || currentProject.date,
         files: currentProject.files,
         openTabs: currentProject.openTabs,
         lastActiveFile: currentProject.lastActiveFile,
         name: currentProject.name,
         order: currentProject.order,
         parentId: currentProject.id,
-        version: currentProject.version || 'v 1'
+        version: currentProject.version || 'v 1',
+        inTrash: false
     };
+
     await saveCode(historicalVersion);
 
     let newVersionNumber;
+
     if (currentProject.version) {
         const currentNum = parseInt(currentProject.version.match(/\d+/)[0], 10) || 0;
         newVersionNumber = currentNum + 1;
     } else {
         newVersionNumber = 2;
     }
-    
-    currentProject.files = filesToSave;
-    currentProject.openTabs = openTabs;
-    currentProject.lastActiveFile = activeFilePath;
-    currentProject.date = now;
-    currentProject.version = `v ${newVersionNumber}`;
 
-    await updateCode(currentProject);
-    loadSavedCodes();
+    const updatedProject = {
+        id: currentProject.id,
+        date: now,
+        createdDate: currentProject.createdDate || currentProject.date,
+        files: filesToSave,
+        openTabs: openTabs,
+        lastActiveFile: activeFilePath,
+        name: currentProject.name,
+        order: currentProject.order,
+        version: `v ${newVersionNumber}`,
+        parentId: null,
+        inTrash: false
+    };
+
+    await updateCode(updatedProject);
+
+    if (menu.style.display === 'flex') {
+        await loadSavedCodes();
+    }
 }
 
-async function renderVersionList(parentId, allProjects) {
+async function renderVersionList(parentId) {
     versionListParentId = parentId;
+
     const versionListContainer = document.getElementById('version-list-container');
-    
-    const projectVersions = allProjects.filter(p => p.parentId === parentId && !p.inTrash)
-                                     .sort((a, b) => new Date(b.date) - new Date(a.date));
+    const projectVersions = getVersionProjectMetaList(parentId)
+        .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
 
-    const parentProject = allProjects.find(p => p.id === parentId);
+    const parentMeta = getProjectMeta(parentId);
 
-    if (projectVersions.length === 0 && !parentProject.version) {
+    if (projectVersions.length === 0 && (!parentMeta || !parentMeta.version)) {
         versionListContainer.style.display = 'none';
         versionListParentId = null;
         return;
@@ -443,52 +482,56 @@ async function renderVersionList(parentId, allProjects) {
 
     versionListContainer.style.display = 'flex';
     versionListContainer.innerHTML = `<div id="version-list"></div>`;
+
     const versionList = versionListContainer.querySelector('#version-list');
 
     const displayList = [...projectVersions];
-    
     displayList.sort((a, b) => compareVersions(a.version, b.version));
 
-    displayList.forEach(project => {
+    displayList.forEach(meta => {
         const button = document.createElement('button');
-        button.dataset.projectId = project.id;
-        
+        button.dataset.projectId = meta.id;
+
         const textContainer = document.createElement('span');
         textContainer.className = 'project-info';
-    
-        let nameHtml = '';
-        if (project.name) {
-            nameHtml += `<span class="name">${project.name}</span>`;
-        }
-    
+
+        const name = meta.name || `Project ${meta.id}`;
+        const dateText = meta.known && meta.date ? formatDate(new Date(meta.date)) : '';
+
         let detailsHtml = `<div class="project-details">`;
-        detailsHtml += `<span class="project-time">${formatDate(new Date(project.date))}</span>`;
-        if (project.version) {
-            detailsHtml += `<span class="project-version">${project.version}</span>`;
+        detailsHtml += `<span class="project-time">${dateText}</span>`;
+
+        if (meta.version) {
+            detailsHtml += `<span class="project-version">${meta.version}</span>`;
         }
+
         detailsHtml += `</div>`;
-        textContainer.innerHTML = nameHtml + detailsHtml;
-        
+
+        textContainer.innerHTML = `<span class="name">${name}</span>` + detailsHtml;
         button.appendChild(textContainer);
-        
+
         button.onclick = async () => {
-            if (currentProjectId !== project.id) {
-                await loadProject(project.id);
+            if (currentProjectId !== meta.id) {
+                await loadProject(meta.id);
             }
         };
 
         button.oncontextmenu = e => {
             e.preventDefault();
+
             showInlineInput({
-                initialValue: project.name || '',
+                initialValue: meta.name || '',
                 placeholder: 'Enter project name...',
                 onSave: async (newName) => {
-                    if (project.name === newName) return;
-                    project.name = newName;
-                    updateCode(project).then(() => {
-                        loadSavedCodes();
+                    if (meta.name === newName) return;
+
+                    await updateProjectMetaOnly(meta.id, { name: newName });
+
+                    if (currentProjectId === meta.id) {
                         updateProjectTitle();
-                    });
+                    }
+
+                    await loadSavedCodes();
                 }
             });
         };
@@ -496,232 +539,282 @@ async function renderVersionList(parentId, allProjects) {
         button.onmousedown = e => {
             if (e.button === 1) {
                 e.preventDefault();
-                project.inTrash = true;
-                updateCode(project).then(() => {
-                    if (currentProjectId === project.id) {
+
+                (async () => {
+                    await updateProjectMetaOnly(meta.id, { inTrash: true });
+
+                    if (currentProjectId === meta.id) {
                         currentProjectId = null;
                         localStorage.removeItem('lastOpenedProjectId');
-                        loadFallbackProject();
+                        await loadFallbackProject();
                     } else {
-                        loadSavedCodes();
+                        await loadSavedCodes();
                     }
-                });
+                })();
             }
         };
 
-        if (project.id === currentProjectId) button.classList.add('selected');
+        if (meta.id === currentProjectId) {
+            button.classList.add('selected');
+        }
+
         versionList.appendChild(button);
     });
 }
 
-async function handleMainProjectDeletion(project, allProjects) {
-    const versions = allProjects.filter(p => p.parentId === project.id && !p.inTrash);
+async function handleMainProjectDeletion(projectMeta) {
+    const versions = getVersionProjectMetaList(projectMeta.id);
 
     if (versions.length > 0) {
         versions.sort((a, b) => compareVersions(a.version, b.version));
+
         const projectToPromote = versions[0];
         const newParentId = projectToPromote.id;
-        
-        delete projectToPromote.parentId;
 
-        const updates = [updateCode(projectToPromote)];
-        versions.slice(1).forEach(sibling => {
-            sibling.parentId = newParentId;
-            updates.push(updateCode(sibling));
-        });
-        
-        await Promise.all(updates);
+        await updateProjectMetaOnly(projectToPromote.id, { parentId: null });
+
+        for (const sibling of versions.slice(1)) {
+            await updateProjectMetaOnly(sibling.id, { parentId: newParentId });
+        }
     }
 }
 
 async function loadSavedCodes() {
-    const allProjects = await getCodes();
-
-    const versions = allProjects.filter(p => p.parentId);
-    const mainProjects = allProjects.filter(p => !p.parentId && !p.inTrash);
-    const trashedProjects = allProjects.filter(p => p.inTrash);
-    const currentProject = allProjects.find(p => p.id === currentProjectId);
-
-    if (currentSortMode === 'free') {
-        mainProjects.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity));
-    } else {
-        mainProjects.sort((a, b) => {
-            const dateA = currentSortMode === 'created' ? (a.createdDate || a.date) : a.date;
-            const dateB = currentSortMode === 'created' ? (b.createdDate || b.date) : b.date;
-            return new Date(dateB) - new Date(dateA);
-        });
+    if (!projectMetaHydrated && !metaHydrationPromise) {
+        hydrateProjectMetadata(false)
+            .then(() => {
+                if (menu.style.display === 'flex') {
+                    loadSavedCodes();
+                }
+            })
+            .catch(console.error);
     }
-    
-    menu.innerHTML = `<div id="menu-controls">
-        <div id="menu-main-actions">
-            <button id="saveBtn">New Project</button>
-            <button id="newVerBtn" style="background-color: #007bff;">New Ver</button>
-            <button id="exportToggleBtn">Export Projects</button>
-            <button id="exportAllBtn">Export All</button>
-            <button id="importProjectBtn">Import zip</button>
-            <button id="importFolderBtn">Import Folder</button>
-            <button id="shareUrlBtn">Share as URL</button>
-            <button id="sharePreviewBtn">Share as Preview</button>
-            <button id="sortBtn"></button>
-            <button id="colorThemeBtn">Color Theme</button>
-            <button id="basketBtn"></button>
+
+    const allMetas = getAllProjectMeta();
+    const versions = allMetas.filter(meta => meta.parentId);
+    const mainProjects = sortProjectMetaList(allMetas.filter(meta => !meta.parentId && !meta.inTrash));
+    const trashedProjects = allMetas.filter(meta => meta.inTrash);
+    const currentMeta = getProjectMeta(currentProjectId);
+
+    menu.innerHTML = `
+        <div id="menu-controls">
+            <div id="menu-main-actions">
+                <button id="saveBtn">New Project</button>
+                <button id="newVerBtn" style="background-color: #007bff;">New Ver</button>
+                <button id="exportToggleBtn">Export Projects</button>
+                <button id="exportAllBtn">Export All</button>
+                <button id="importProjectBtn">Import zip</button>
+                <button id="importFolderBtn">Import Folder</button>
+                <button id="shareUrlBtn">Share as URL</button>
+                <button id="sharePreviewBtn">Share as Preview</button>
+                <button id="sortBtn"></button>
+                <button id="colorThemeBtn">Color Theme</button>
+                <button id="basketBtn"></button>
+            </div>
+            <div id="fileInfo"></div>
         </div>
-        <div id="fileInfo"></div>
-    </div>
-    <div id="project-list-wrapper">
-        <div id="project-list"></div>
-        <div id="basket-view" style="display:none;"></div>
-    </div>
-    <div id="version-list-container" style="display: none;"></div>`;
+        <div id="project-list-wrapper">
+            <div id="project-list"></div>
+            <div id="basket-view" style="display:none;"></div>
+        </div>
+        <div id="version-list-container" style="display: none;"></div>
+    `;
+
     const projectList = menu.querySelector('#project-list');
+
     if (showExportArrows) {
         projectList.classList.add('show-export-arrows');
     }
+
     const basketView = menu.querySelector('#basket-view');
 
-    mainProjects.forEach(project => {
+    mainProjects.forEach(meta => {
         const button = document.createElement('button');
-        button.dataset.projectId = project.id;
-        
-        if (currentSortMode === 'free') button.draggable = true;
+        button.dataset.projectId = meta.id;
+
+        if (currentSortMode === 'free') {
+            button.draggable = true;
+        }
 
         const textContainer = document.createElement('span');
         textContainer.className = 'project-info';
-    
-        let nameHtml = '';
-        if (project.name) nameHtml += `<span class="name">${project.name}</span>`;
-        
+
+        const name = meta.name || `Project ${meta.id}`;
+        const dateText = meta.known && meta.date ? formatDate(new Date(meta.date)) : '…';
+
         let detailsHtml = `<div class="project-details">`;
-        detailsHtml += `<span class="project-time">${formatDate(new Date(project.date))}</span>`;
-        if (project.version) {
-            detailsHtml += `<span class="project-version">${project.version}</span>`;
+        detailsHtml += `<span class="project-time">${dateText}</span>`;
+
+        if (meta.version) {
+            detailsHtml += `<span class="project-version">${meta.version}</span>`;
         }
+
         detailsHtml += `</div>`;
-    
-        textContainer.innerHTML = nameHtml + detailsHtml;
+
+        textContainer.innerHTML = `<span class="name">${name}</span>` + detailsHtml;
 
         const arrow = document.createElement('span');
         arrow.innerHTML = '↓';
         arrow.className = 'export-arrow';
         arrow.title = 'Export project as .zip';
-        arrow.addEventListener('click', e => { e.stopPropagation(); exportProjectAsZip(project.id); e.currentTarget.classList.add('exported'); setTimeout(() => e.currentTarget.classList.remove('exported'), 300000); });
-        
+
+        arrow.addEventListener('click', e => {
+            e.stopPropagation();
+            exportProjectAsZip(meta.id);
+            e.currentTarget.classList.add('exported');
+            setTimeout(() => e.currentTarget.classList.remove('exported'), 300000);
+        });
+
         button.appendChild(textContainer);
         button.appendChild(arrow);
-        
+
         let pressTimer;
 
         button.addEventListener('mousedown', (e) => {
-            if (e.button === 0) { // Left click
+            if (e.button === 0) {
                 pressTimer = setTimeout(() => {
-                    const added = addProjectToLauncher(project.id);
-                    if (added) {
-                        showNotification(`Added "${project.name || 'Project'}" to Launcher`);
-                    } else {
-                        showNotification(`"${project.name || 'Project'}" is already in Launcher`);
-                    }
-                    pressTimer = null;
-                }, 800); // 800ms for long press
-            } else if (e.button === 1) { // Middle click delete
-                 e.preventDefault();
-                 (async () => {
-                    await handleMainProjectDeletion(project, await getCodes());
-                    project.inTrash = true;
-                    await updateCode(project);
-                    
-                    const updatedCurrentProject = (await getCodes()).find(p => p.id === currentProjectId);
+                    const added = addProjectToLauncher(meta.id);
 
-                    if (currentProjectId === project.id || (updatedCurrentProject && updatedCurrentProject.parentId === project.id)) {
+                    if (added) {
+                        showNotification(`Added "${name}" to Launcher`);
+                    } else {
+                        showNotification(`"${name}" is already in Launcher`);
+                    }
+
+                    pressTimer = null;
+                }, 800);
+            } else if (e.button === 1) {
+                e.preventDefault();
+
+                (async () => {
+                    await handleMainProjectDeletion(meta);
+                    await updateProjectMetaOnly(meta.id, { inTrash: true });
+
+                    const currentMetaAfter = getProjectMeta(currentProjectId);
+
+                    if (
+                        currentProjectId === meta.id ||
+                        (currentMetaAfter && currentMetaAfter.parentId === meta.id)
+                    ) {
                         currentProjectId = null;
                         localStorage.removeItem('lastOpenedProjectId');
-                        loadFallbackProject();
+                        await loadFallbackProject();
                     } else {
-                        loadSavedCodes();
+                        await loadSavedCodes();
                     }
                 })();
             }
         });
 
         button.addEventListener('mouseup', (e) => {
-             if (e.button === 0 && pressTimer) {
+            if (e.button === 0 && pressTimer) {
                 clearTimeout(pressTimer);
-                // Normal click action
+
                 (async () => {
-                    if (currentProjectId !== project.id) await loadProject(project.id);
-                    else renderVersionList(project.id, await getCodes());
+                    if (currentProjectId !== meta.id) {
+                        await loadProject(meta.id);
+                    } else {
+                        await renderVersionList(meta.id);
+                    }
                 })();
-             }
+            }
         });
 
         button.addEventListener('mouseleave', () => {
             if (pressTimer) clearTimeout(pressTimer);
         });
-        
+
         button.oncontextmenu = e => {
             e.preventDefault();
+
             showInlineInput({
-                initialValue: project.name || '',
+                initialValue: meta.name || '',
                 placeholder: 'Enter project name...',
                 onSave: async (newName) => {
-                    if (project.name === newName) return;
-                    
-                    const allProjects = await getCodes();
-                    const nameExists = allProjects.some(p => p.id !== project.id && !p.inTrash && p.name && p.name.toLowerCase() === newName.toLowerCase());
+                    if (meta.name === newName) return;
+
+                    const nameExists = getAllProjectMeta().some(m => {
+                        return m.id !== meta.id &&
+                               !m.inTrash &&
+                               m.name &&
+                               m.name.toLowerCase() === newName.toLowerCase();
+                    });
+
                     if (nameExists) {
-                        showNotification('A project with that name already exists.'); return;
+                        showNotification('A project with that name already exists.');
+                        return;
                     }
-                    project.name = newName;
-                    updateCode(project).then(() => { loadSavedCodes(); updateProjectTitle(); });
+
+                    await updateProjectMetaOnly(meta.id, { name: newName });
+
+                    if (currentProjectId === meta.id) {
+                        updateProjectTitle();
+                    }
+
+                    await loadSavedCodes();
                 }
             });
         };
 
-        if (project.id === currentProjectId || (currentProject && currentProject.parentId === project.id)) button.classList.add('selected');
+        if (meta.id === currentProjectId || (currentMeta && currentMeta.parentId === meta.id)) {
+            button.classList.add('selected');
+        }
+
         projectList.appendChild(button);
     });
 
-    if (currentProject) {
-        const parentIdToShow = currentProject.parentId || currentProject.id;
-        const hasVersions = versions.some(v => v.parentId === parentIdToShow);
+    if (currentMeta) {
+        const parentIdToShow = currentMeta.parentId || currentMeta.id;
+        const hasVersions = getVersionProjectMetaList(parentIdToShow).length > 0;
         const parentIsMainProject = mainProjects.some(p => p.id === parentIdToShow);
-        if (hasVersions || (parentIsMainProject && currentProject.version)) {
-             renderVersionList(parentIdToShow, allProjects);
+
+        if (hasVersions || (parentIsMainProject && currentMeta.version)) {
+            renderVersionList(parentIdToShow);
         }
     }
 
     document.getElementById('saveBtn').onclick = () => saveCurrentCode(false);
     document.getElementById('newVerBtn').onclick = createNewVersion;
+
     document.getElementById('exportToggleBtn').onclick = () => {
         showExportArrows = !showExportArrows;
         projectList.classList.toggle('show-export-arrows', showExportArrows);
     };
+
     document.getElementById('exportAllBtn').onclick = exportAllProjectsAsZip;
     document.getElementById('importProjectBtn').onclick = importProject;
     document.getElementById('importFolderBtn').onclick = importProjectFolder;
     document.getElementById('shareUrlBtn').onclick = () => generateShareableUrl('#p=');
     document.getElementById('sharePreviewBtn').onclick = () => generateShareableUrl('#t=');
-    
+
     const sortBtn = document.getElementById('sortBtn');
+
     let sortModeText = 'Changed';
     if (currentSortMode === 'created') sortModeText = 'Created';
     if (currentSortMode === 'free') sortModeText = 'Free';
+
     sortBtn.textContent = `Sort by: ${sortModeText}`;
-    
+
     sortBtn.onclick = () => {
         if (currentSortMode === 'created') currentSortMode = 'changed';
         else if (currentSortMode === 'changed') currentSortMode = 'free';
         else currentSortMode = 'created';
+
         localStorage.setItem('projectSortMode', currentSortMode);
         loadSavedCodes();
     };
 
-    document.getElementById('colorThemeBtn').onclick = () => { colorPicker.style.display = (colorPicker.style.display === 'none' || colorPicker.style.display === '') ? 'flex' : 'none'; };
-    
+    document.getElementById('colorThemeBtn').onclick = () => {
+        colorPicker.style.display = (colorPicker.style.display === 'none' || colorPicker.style.display === '') ? 'flex' : 'none';
+    };
+
     const basketBtn = document.getElementById('basketBtn');
-    basketBtn.textContent = `Basket(${basket.length + trashedProjects.length})`;
+    updateBasketButtonText();
+
     basketBtn.onclick = () => {
         const isBasketVisible = basketView.style.display !== 'none';
-        if(isBasketVisible) {
+
+        if (isBasketVisible) {
             basketView.style.display = 'none';
             projectList.style.display = 'block';
             basketBtn.classList.remove('basket-active');
@@ -730,25 +823,24 @@ async function loadSavedCodes() {
             basketBtn.classList.add('basket-active');
         }
     };
+
     basketBtn.onmousedown = async (e) => {
         if (e.button === 1) {
             e.preventDefault();
+
             basket = [];
             saveBasket();
-            
-            const projectsFromDB = await getCodes();
-            const trashed = projectsFromDB.filter(p => p.inTrash);
-            
-            for (const project of trashed) {
-                if (!project.parentId) {
-                    await handleMainProjectDeletion(project, projectsFromDB);
+
+            const trashed = getTrashedProjectMetaList();
+
+            for (const meta of trashed) {
+                if (!meta.parentId) {
+                    await handleMainProjectDeletion(meta);
                 }
             }
 
-            const deletePromises = trashed.map(p => deleteCode(p.id));
-            await Promise.all(deletePromises);
-            
-            loadSavedCodes();
+            await Promise.all(trashed.map(meta => deleteCode(meta.id)));
+            await loadSavedCodes();
         }
     };
 
@@ -757,9 +849,11 @@ async function loadSavedCodes() {
 
         const getProjectDragAfterElement = (container, y) => {
             const draggableElements = [...container.querySelectorAll('button[draggable="true"]:not(.dragging)')];
+
             return draggableElements.reduce((closest, child) => {
                 const box = child.getBoundingClientRect();
                 const offset = y - box.top - box.height / 2;
+
                 if (offset < 0 && offset > closest.offset) {
                     return { offset: offset, element: child };
                 } else {
@@ -770,6 +864,7 @@ async function loadSavedCodes() {
 
         projectList.addEventListener('dragstart', e => {
             const target = e.target.closest('button[draggable="true"]');
+
             if (target) {
                 draggingElement = target;
                 setTimeout(() => target.classList.add('dragging'), 0);
@@ -778,7 +873,9 @@ async function loadSavedCodes() {
 
         projectList.addEventListener('dragover', e => {
             e.preventDefault();
+
             const afterElement = getProjectDragAfterElement(projectList, e.clientY);
+
             if (draggingElement) {
                 if (afterElement == null) projectList.appendChild(draggingElement);
                 else projectList.insertBefore(draggingElement, afterElement);
@@ -794,25 +891,33 @@ async function loadSavedCodes() {
 
         projectList.addEventListener('drop', async e => {
             e.preventDefault();
+
             if (!draggingElement) return;
 
             const projectButtons = [...projectList.querySelectorAll('button[data-project-id]')];
-            const updatePromises = projectButtons.map((button, index) => {
-                const projectId = parseInt(button.dataset.projectId, 10);
-                const projectToUpdate = mainProjects.find(p => p.id === projectId);
-                if (projectToUpdate && (projectToUpdate.order ?? -1) !== index) {
-                    projectToUpdate.order = index;
-                    return updateCode(projectToUpdate);
-                }
-                return null;
-            }).filter(Boolean);
 
-            if (updatePromises.length > 0) await Promise.all(updatePromises);
+            for (let index = 0; index < projectButtons.length; index++) {
+                const projectId = parseInt(projectButtons[index].dataset.projectId, 10);
+                const meta = getProjectMeta(projectId);
+
+                if (meta && (meta.order ?? -1) !== index) {
+                    await updateProjectMetaOnly(projectId, { order: index });
+                }
+            }
         });
     }
 
     updateFileInfo();
+
     const savedScroll = localStorage.getItem('projectListScrollPosition');
-    if (savedScroll) setTimeout(() => { projectList.scrollTop = parseInt(savedScroll, 10); }, 0);
-    projectList.addEventListener('scroll', () => localStorage.setItem('projectListScrollPosition', projectList.scrollTop));
+
+    if (savedScroll) {
+        setTimeout(() => {
+            projectList.scrollTop = parseInt(savedScroll, 10);
+        }, 0);
+    }
+
+    projectList.addEventListener('scroll', () => {
+        localStorage.setItem('projectListScrollPosition', projectList.scrollTop);
+    });
 }

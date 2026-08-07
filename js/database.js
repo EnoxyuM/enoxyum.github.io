@@ -4,8 +4,13 @@ function openDB() {
 
         request.onupgradeneeded = e => {
             db = e.target.result;
+
             if (!db.objectStoreNames.contains(STORE_NAME)) {
                 db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+            }
+
+            if (!db.objectStoreNames.contains(META_STORE_NAME)) {
+                db.createObjectStore(META_STORE_NAME, { keyPath: 'id' });
             }
         };
 
@@ -18,70 +23,12 @@ function openDB() {
     });
 }
 
-function saveCode(p) {
-    isDbDirty = true;
+function getProjectRecord(id) {
+    return new Promise((resolve, reject) => {
+        const request = db.transaction([STORE_NAME], 'readonly').objectStore(STORE_NAME).get(id);
 
-    return new Promise((res, rej) => {
-        const r = db.transaction([STORE_NAME], 'readwrite').objectStore(STORE_NAME).add(p);
-
-        r.onsuccess = e => {
-            const id = e.target.result;
-            p.id = id;
-            upsertProjectMeta(p, true);
-            res(id);
-        };
-
-        r.onerror = e => rej('Error saving project');
-    });
-}
-
-function updateCode(p) {
-    isDbDirty = true;
-
-    return new Promise((res, rej) => {
-        const r = db.transaction([STORE_NAME], 'readwrite').objectStore(STORE_NAME).put(p);
-
-        r.onsuccess = e => {
-            upsertProjectMeta(p, true);
-            res(e.target.result);
-        };
-
-        r.onerror = e => rej('Error updating project');
-    });
-}
-
-function deleteCode(id) {
-    isDbDirty = true;
-
-    return new Promise((res, rej) => {
-        const r = db.transaction([STORE_NAME], 'readwrite').objectStore(STORE_NAME).delete(id);
-
-        r.onsuccess = () => {
-            removeProjectMeta(id);
-            res();
-        };
-
-        r.onerror = () => rej('Error deleting project');
-    });
-}
-
-function getCodes() {
-    return new Promise((res, rej) => {
-        const r = db.transaction([STORE_NAME], 'readonly').objectStore(STORE_NAME).getAll();
-
-        r.onsuccess = e => {
-            const projects = e.target.result;
-
-            if (Array.isArray(projects)) {
-                projects.forEach(project => {
-                    upsertProjectMeta(project, true);
-                });
-            }
-
-            res(projects);
-        };
-
-        r.onerror = e => rej('Error getting projects');
+        request.onsuccess = e => resolve(e.target.result);
+        request.onerror = e => reject(e);
     });
 }
 
@@ -95,6 +42,7 @@ function getAllProjectKeys() {
 
             request.onsuccess = e => {
                 const cursor = e.target.result;
+
                 if (cursor) {
                     keys.push(cursor.primaryKey);
                     cursor.continue();
@@ -110,29 +58,264 @@ function getAllProjectKeys() {
     });
 }
 
-async function ensureProjectMetaCacheReady() {
-    if (projectMetaReady) return;
+function loadProjectMetaCacheFromDB() {
+    return new Promise(resolve => {
+        try {
+            const request = db.transaction([META_STORE_NAME], 'readonly').objectStore(META_STORE_NAME).getAll();
 
-    try {
+            request.onsuccess = e => {
+                projectMetaCache = new Map();
+
+                const metas = e.target.result || [];
+                metas.forEach(meta => {
+                    if (meta && meta.id !== undefined) {
+                        setProjectMetaLocal(meta);
+                    }
+                });
+
+                resolve();
+            };
+
+            request.onerror = () => resolve();
+        } catch (e) {
+            resolve();
+        }
+    });
+}
+
+function putProjectMetaRecord(meta) {
+    return new Promise((resolve, reject) => {
+        const request = db.transaction([META_STORE_NAME], 'readwrite').objectStore(META_STORE_NAME).put(meta);
+
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject('Error saving project meta');
+    });
+}
+
+function deleteProjectMetaRecord(id) {
+    return new Promise((resolve, reject) => {
+        const request = db.transaction([META_STORE_NAME], 'readwrite').objectStore(META_STORE_NAME).delete(id);
+
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject('Error deleting project meta');
+    });
+}
+
+async function saveProjectMeta(meta) {
+    if (!meta || meta.id === undefined || meta.id === null) return;
+    setProjectMetaLocal(meta);
+    await putProjectMetaRecord(meta);
+}
+
+async function removeProjectMeta(id) {
+    removeProjectMetaLocal(id);
+    await deleteProjectMetaRecord(id);
+}
+
+async function updateProjectMetaOnly(id, changes = {}) {
+    const existing = getProjectMeta(id) || { id };
+
+    const meta = {
+        id,
+        name: '',
+        date: 0,
+        createdDate: 0,
+        version: null,
+        parentId: null,
+        inTrash: false,
+        order: null,
+        size: 0,
+        known: false,
+        ...existing,
+        ...changes,
+        known: true
+    };
+
+    if (meta.parentId === undefined) meta.parentId = null;
+    if (meta.version === undefined) meta.version = null;
+    if (meta.order === undefined) meta.order = null;
+
+    await saveProjectMeta(meta);
+    return meta;
+}
+
+async function syncProjectMetaFromRecord(record, mode = 'save') {
+    if (!record || record.id === undefined || record.id === null) return null;
+
+    const meta = mode === 'hydrate'
+        ? extractProjectMetaForHydration(record)
+        : extractProjectMetaForSave(record);
+
+    if (!meta) return null;
+
+    await saveProjectMeta(meta);
+    return meta;
+}
+
+async function ensureProjectMetaPlaceholders() {
+    const keys = await getAllProjectKeys();
+    const keySet = new Set(keys);
+
+    const missing = [];
+
+    keys.forEach(id => {
+        if (!getProjectMeta(id)) {
+            missing.push({
+                id,
+                name: '',
+                date: 0,
+                createdDate: 0,
+                version: null,
+                parentId: null,
+                inTrash: false,
+                order: null,
+                size: 0,
+                known: false
+            });
+        }
+    });
+
+    const stale = getAllProjectMeta().filter(meta => !keySet.has(meta.id));
+
+    if (missing.length > 0) {
+        await new Promise((resolve, reject) => {
+            const tx = db.transaction([META_STORE_NAME], 'readwrite');
+            const store = tx.objectStore(META_STORE_NAME);
+
+            missing.forEach(meta => store.put(meta));
+
+            tx.oncomplete = () => {
+                missing.forEach(setProjectMetaLocal);
+                resolve();
+            };
+
+            tx.onerror = () => reject('Error creating meta placeholders');
+        });
+    }
+
+    if (stale.length > 0) {
+        await new Promise((resolve, reject) => {
+            const tx = db.transaction([META_STORE_NAME], 'readwrite');
+            const store = tx.objectStore(META_STORE_NAME);
+
+            stale.forEach(meta => store.delete(meta.id));
+
+            tx.oncomplete = () => {
+                stale.forEach(meta => removeProjectMetaLocal(meta.id));
+                resolve();
+            };
+
+            tx.onerror = () => reject('Error removing stale meta');
+        });
+    }
+}
+
+function hydrateProjectMetadata(force = false) {
+    if (!force && projectMetaHydrated) {
+        return Promise.resolve();
+    }
+
+    if (metaHydrationPromise) {
+        return metaHydrationPromise;
+    }
+
+    metaHydrationPromise = (async () => {
         const keys = await getAllProjectKeys();
-        const keySet = new Set(keys);
+        let processed = 0;
 
-        for (const id of Array.from(projectMetaCache.keys())) {
-            if (!keySet.has(id)) {
-                projectMetaCache.delete(id);
+        for (const id of keys) {
+            const meta = getProjectMeta(id);
+
+            if (!meta || !meta.known) {
+                try {
+                    const record = await getProjectRecord(id);
+
+                    if (record && record.files) {
+                        await syncProjectMetaFromRecord(record, 'hydrate');
+                    } else {
+                        await removeProjectMeta(id);
+                    }
+                } catch (e) {
+                    console.error('Meta hydration error for project', id, e);
+                }
+            }
+
+            processed++;
+
+            if (processed % 3 === 0) {
+                await new Promise(resolve => setTimeout(resolve, 0));
             }
         }
 
-        keys.forEach(id => {
-            addPlaceholderProjectMeta(id);
-        });
+        projectMetaHydrated = true;
+        localStorage.setItem('codium_meta_hydrated_v2', 'true');
+    })().finally(() => {
+        metaHydrationPromise = null;
+    });
 
-        saveProjectMetaCache();
-        projectMetaReady = true;
-        localStorage.setItem('codium_project_meta_ready', 'true');
-    } catch (e) {
-        console.error('Could not prepare project meta cache', e);
-    }
+    return metaHydrationPromise;
+}
+
+function saveCode(p) {
+    isDbDirty = true;
+
+    return new Promise((res, rej) => {
+        const r = db.transaction([STORE_NAME], 'readwrite').objectStore(STORE_NAME).add(p);
+
+        r.onsuccess = e => {
+            const id = e.target.result;
+            p.id = id;
+
+            syncProjectMetaFromRecord(p, 'save')
+                .catch(console.error)
+                .finally(() => res(id));
+        };
+
+        r.onerror = e => rej('Error saving project');
+    });
+}
+
+function updateCode(p) {
+    isDbDirty = true;
+
+    applyProjectMetaToRecord(p);
+
+    return new Promise((res, rej) => {
+        const r = db.transaction([STORE_NAME], 'readwrite').objectStore(STORE_NAME).put(p);
+
+        r.onsuccess = e => {
+            syncProjectMetaFromRecord(p, 'save')
+                .catch(console.error)
+                .finally(() => res(e.target.result));
+        };
+
+        r.onerror = e => rej('Error updating project');
+    });
+}
+
+function deleteCode(id) {
+    isDbDirty = true;
+
+    return new Promise((res, rej) => {
+        const r = db.transaction([STORE_NAME], 'readwrite').objectStore(STORE_NAME).delete(id);
+
+        r.onsuccess = () => {
+            removeProjectMeta(id)
+                .catch(console.error)
+                .finally(() => res());
+        };
+
+        r.onerror = () => rej('Error deleting project');
+    });
+}
+
+function getCodes() {
+    return new Promise((res, rej) => {
+        const r = db.transaction([STORE_NAME], 'readonly').objectStore(STORE_NAME).getAll();
+
+        r.onsuccess = e => res(e.target.result);
+        r.onerror = e => rej('Error getting projects');
+    });
 }
 
 function uploadFiles(fileList, basePath) {

@@ -151,17 +151,13 @@ function updateFileInfo() {
     const fileInfoEl = document.getElementById('fileInfo');
     if (!fileInfoEl) return;
 
-    let totalSize = 0;
-    let count = 0;
+    const metas = getAllProjectMeta();
 
-    projectMetaCache.forEach(meta => {
-        count++;
-        totalSize += meta.size || 0;
-    });
-
-    cachedTotalSize = totalSize;
-    cachedProjectsCount = count;
+    cachedProjectsCount = metas.length;
+    cachedTotalSize = metas.reduce((acc, meta) => acc + (meta.size || 0), 0);
     isDbDirty = false;
 
-    fileInfoEl.textContent = `${(totalSize / 1024).toFixed(2)} KB, Projects: ${count}`;
+    const suffix = projectMetaHydrated ? '' : ' *';
+
+    fileInfoEl.textContent = `${(cachedTotalSize / 1024).toFixed(2)} KB, Projects: ${cachedProjectsCount}${suffix}`;
 }

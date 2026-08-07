@@ -14,13 +14,18 @@ function ensureEditorProjectLoaded() {
 
         if (lastOpenedIdStr) {
             const lastOpenedId = parseInt(lastOpenedIdStr, 10);
+            const lastMeta = getProjectMeta(lastOpenedId);
 
-            try {
-                await loadProject(lastOpenedId);
-                return;
-            } catch (e) {
-                console.error('Could not load last opened project:', e);
+            if (lastMeta && lastMeta.inTrash) {
                 localStorage.removeItem('lastOpenedProjectId');
+            } else {
+                try {
+                    await loadProject(lastOpenedId);
+                    return;
+                } catch (e) {
+                    console.error('Could not load last opened project:', e);
+                    localStorage.removeItem('lastOpenedProjectId');
+                }
             }
         }
 
@@ -49,7 +54,9 @@ if (!isPreviewMode) {
     showingEditor = true;
 
     openDB().then(async () => {
-        await ensureProjectMetaCacheReady();
+        await loadProjectMetaCacheFromDB();
+        await ensureProjectMetaPlaceholders();
+
         loadBasket();
 
         if (await loadFromUrlHash()) {
@@ -61,6 +68,7 @@ if (!isPreviewMode) {
 
             editor.refresh();
             editor.focus();
+
             return;
         }
 
@@ -73,8 +81,10 @@ if (!isPreviewMode) {
 
 function formatDate(d) {
     const s = (new Date() - d) / 1000;
+
     if (s < 60) return `${Math.round(s)}s`;
     if (s < 3600) return `${Math.round(s / 60)}m`;
     if (s < 86400) return `${Math.round(s / 3600)}h`;
+
     return `${Math.round(s / 86400)}d`;
 }
