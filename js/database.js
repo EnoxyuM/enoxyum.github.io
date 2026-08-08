@@ -15,9 +15,44 @@ if (typeof libraryMetaLoadPromise === 'undefined') {
 window.libraryMetaLoadPromise = null;
 }
 
+function normalizeProjectFilesForStorage(fileSet) {
+const out = {};
+if (!fileSet) return out;
+for (const path in fileSet) {
+const fd = fileSet[path];
+if (!fd) continue;
+if (typeof fd === 'string') {
+out[path] = { isBinary: false, code: fd };
+continue;
+}
+if (fd.libRef != null) {
+const minimal = {
+libRef: fd.libRef,
+isBinary: !!fd.isBinary
+};
+if (fd.isBinary && fd.mimeType) minimal.mimeType = fd.mimeType;
+out[path] = minimal;
+continue;
+}
+if (fd.isBinary) {
+out[path] = {
+isBinary: true,
+mimeType: fd.mimeType || 'application/octet-stream',
+content: fd.content !== undefined ? fd.content : pako.gzip(new Uint8Array(0))
+};
+} else {
+out[path] = {
+isBinary: false,
+code: fd.code !== undefined ? fd.code : ''
+};
+}
+}
+return out;
+}
+
 function openDB() {
 return new Promise((resolve, reject) => {
-const request = indexedDB.open(DB_NAME, 3);
+const request = indexedDB.open(DB_NAME, DB_VERSION);
 request.onupgradeneeded = e => {
 db = e.target.result;
 if (!db.objectStoreNames.contains(STORE_NAME)) {
@@ -228,6 +263,7 @@ return metaHydrationPromise;
 }
 function saveCode(p) {
 isDbDirty = true;
+p.files = normalizeProjectFilesForStorage(p.files);
 return new Promise((res, rej) => {
 const r = db.transaction([STORE_NAME], 'readwrite').objectStore(STORE_NAME).add(p);
 r.onsuccess = e => {
@@ -243,6 +279,7 @@ r.onerror = e => rej('Error saving project');
 function updateCode(p) {
 isDbDirty = true;
 applyProjectMetaToRecord(p);
+p.files = normalizeProjectFilesForStorage(p.files);
 return new Promise((res, rej) => {
 const r = db.transaction([STORE_NAME], 'readwrite').objectStore(STORE_NAME).put(p);
 r.onsuccess = e => {
@@ -283,7 +320,6 @@ updateScene();
 }
 showNotification(`Finished uploading ${filesToProcess.length} file(s).`);
 };
-const TEXT_EXTENSIONS = new Set(['txt', 'js', 'json', 'html', 'htm', 'css', 'xml', 'svg', 'md', 'csv', 'log', 'ini', 'yaml', 'yml', 'toml', 'sh', 'bash', 'py', 'rb', 'php', 'java', 'c', 'cpp', 'h', 'hpp', 'cs', 'go', 'rs', 'ts', 'tsx', 'jsx']);
 filesToProcess.forEach(file => {
 let originalName = file.name;
 let finalName = originalName;
@@ -481,10 +517,7 @@ async function addLibraryFileObject(file, parentId) {
 const safeParent = parentId ?? null;
 const finalName = getUniqueLibraryName(file.name, safeParent, 'file');
 const extension = finalName.split('.').pop().toLowerCase();
-const TEXT_EXTENSIONS_LOCAL = typeof TEXT_EXTENSIONS !== 'undefined'
-? TEXT_EXTENSIONS
-: new Set(['txt', 'js', 'json', 'html', 'htm', 'css', 'xml', 'svg', 'md', 'csv', 'log', 'ini', 'yaml', 'yml', 'toml', 'sh', 'bash', 'py', 'rb', 'php', 'java', 'c', 'cpp', 'h', 'hpp', 'cs', 'go', 'rs', 'ts', 'tsx', 'jsx']);
-const isText = TEXT_EXTENSIONS_LOCAL.has(extension) || (file.type && file.type.startsWith('text/'));
+const isText = TEXT_EXTENSIONS.has(extension) || (file.type && file.type.startsWith('text/'));
 const now = Date.now();
 if (isText) {
 const code = await new Promise((resolve, reject) => {
@@ -603,9 +636,14 @@ await updateLibraryMetaOnly(id, { parentId: safeParent });
 }
 async function hydrateProjectLibRefs(fileSet) {
 const hydrated = {};
+if (!fileSet) return hydrated;
 for (const path in fileSet) {
 let fileData = fileSet[path];
 if (!fileData) continue;
+if (typeof fileData === 'string') {
+hydrated[path] = { isBinary: false, code: fileData };
+continue;
+}
 if (fileData.libRef != null) {
 const needsHydration = (fileData.isBinary && fileData.content === undefined) || (!fileData.isBinary && fileData.code === undefined);
 if (needsHydration) {
@@ -643,9 +681,14 @@ return hydrated;
 }
 async function resolveProjectFilesForExport(fileSet) {
 const resolved = {};
+if (!fileSet) return resolved;
 for (const path in fileSet) {
 let fileData = fileSet[path];
 if (!fileData) continue;
+if (typeof fileData === 'string') {
+resolved[path] = { isBinary: false, code: fileData };
+continue;
+}
 if (fileData.libRef != null) {
 const needsHydration = (fileData.isBinary && fileData.content === undefined) || (!fileData.isBinary && fileData.code === undefined);
 if (needsHydration) {
@@ -674,7 +717,7 @@ continue;
 if (fileData.isBinary) {
 resolved[path] = {
 isBinary: true,
-mimeType: fileData.mimeType,
+mimeType: fileData.mimeType || 'application/octet-stream',
 content: fileData.content !== undefined ? fileData.content : pako.gzip(new Uint8Array(0))
 };
 } else {
