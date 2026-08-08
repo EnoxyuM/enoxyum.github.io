@@ -270,3 +270,13 @@ color: #888;
 text-align: center;
 padding: 15px;
 }
+
+#library-list.drag-over {
+outline: 1px dashed #094771;
+}
+#library-list button.library-item.dragging {
+opacity: 0.5;
+}
+#library-list button.library-item.drag-over {
+background: #094771;
+}
