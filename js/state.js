@@ -124,6 +124,14 @@ if (!project || !project.files) return size;
 for (const path in project.files) {
 const f = project.files[path];
 if (!f) continue;
+if (typeof f === 'string') {
+size += f.length;
+continue;
+}
+if (f.libRef != null) {
+size += 16 + String(f.libRef).length + (f.mimeType ? String(f.mimeType).length : 0);
+continue;
+}
 if (f.isBinary && f.content) {
 size += f.content.byteLength || f.content.length || 0;
 } else if (f.code) {
