@@ -1,4 +1,11 @@
 // js/ui/modals.js
+if (typeof libraryOpenFolders === 'undefined') {
+window.libraryOpenFolders = new Set();
+}
+if (typeof libraryCurrentFolder === 'undefined') {
+window.libraryCurrentFolder = null;
+}
+
 function showInlineInput({ initialValue = '', placeholder = '', onSave, onCancel = () => {} }) {
 inlineInputContainer.style.display = 'block';
 inlineInputField.value = initialValue;
@@ -51,6 +58,8 @@ hideLibraryMenu();
 }
 
 let libraryMenuElem = null;
+let draggedLibraryItemId = null;
+
 function ensureLibraryMenu() {
 if (libraryMenuElem) return libraryMenuElem;
 if (isPreviewMode) return null;
@@ -172,6 +181,30 @@ await ensureLibraryMetaLoaded();
 } catch (e) {}
 }
 list.innerHTML = '';
+list.ondragover = e => {
+if (draggedLibraryItemId == null) return;
+e.preventDefault();
+e.dataTransfer.dropEffect = 'move';
+list.classList.add('drag-over');
+};
+list.ondragleave = e => {
+if (!list.contains(e.relatedTarget)) {
+list.classList.remove('drag-over');
+}
+};
+list.ondrop = async e => {
+if (draggedLibraryItemId == null) return;
+e.preventDefault();
+list.classList.remove('drag-over');
+const draggedId = draggedLibraryItemId;
+try {
+await moveLibraryItem(draggedId, null);
+draggedLibraryItemId = null;
+renderLibraryList();
+} catch (err) {
+console.error(err);
+}
+};
 const container = document.createElement('div');
 renderLibraryChildren(null, container, 0);
 if (!container.hasChildNodes()) {
@@ -201,10 +234,62 @@ filesList.forEach(meta => {
 container.appendChild(createLibraryItemButton(meta, depth));
 });
 }
+function isLibraryDescendant(childId, ancestorId) {
+let current = getLibraryMeta(childId);
+let guard = 0;
+while (current && guard++ < 100) {
+const parent = current.parentId === undefined ? null : current.parentId;
+if (String(parent ?? '') === String(ancestorId)) return true;
+current = getLibraryMeta(parent);
+}
+return false;
+}
+function canDropLibraryItem(draggedId, targetMeta) {
+if (draggedId == null || !targetMeta) return true;
+if (String(draggedId) === String(targetMeta.id)) return false;
+const draggedMeta = getLibraryMeta(draggedId);
+if (draggedMeta && (draggedMeta.type || 'file') === 'folder') {
+if (isLibraryDescendant(targetMeta.id, draggedId)) return false;
+}
+return true;
+}
+function removeCurrentProjectFilesByLibraryIds(ids) {
+if (!ids || !ids.length) return;
+const idSet = new Set(ids.map(String));
+let removed = false;
+Object.keys(files).forEach(path => {
+const fileData = files[path];
+if (fileData && fileData.libRef != null && idSet.has(String(fileData.libRef))) {
+const tabIndex = openTabs.indexOf(path);
+if (tabIndex > -1) openTabs.splice(tabIndex, 1);
+forceOpenAsText.delete(path);
+delete files[path];
+removed = true;
+}
+});
+if (!removed) return;
+if (activeFilePath && !files[activeFilePath]) {
+activeFilePath = openTabs.length > 0 ? openTabs[0] : null;
+}
+if (activeFilePath && files[activeFilePath]) {
+updateEditorView(activeFilePath);
+saveActiveTab();
+} else {
+if (!isPreviewMode && typeof editor !== 'undefined' && editor) {
+editor.swapDoc(CodeMirror.Doc('', 'text/plain'));
+editor.setOption('readOnly', false);
+}
+}
+renderAll();
+if (liveUpdateToggle.checked) {
+updateScene();
+}
+}
 function createLibraryItemButton(meta, depth) {
 const button = document.createElement('button');
 button.className = 'library-item';
 button.dataset.id = meta.id;
+button.draggable = true;
 const isFolder = (meta.type || 'file') === 'folder';
 if (isFolder) button.classList.add('library-folder');
 else button.classList.add('library-file');
@@ -224,6 +309,56 @@ info.className = 'library-info';
 info.textContent = meta.date ? formatDate(new Date(meta.date)) : '';
 button.appendChild(name);
 button.appendChild(info);
+
+button.addEventListener('dragstart', e => {
+draggedLibraryItemId = meta.id;
+e.dataTransfer.setData('text/plain', String(meta.id));
+e.dataTransfer.effectAllowed = 'move';
+setTimeout(() => button.classList.add('dragging'), 0);
+});
+button.addEventListener('dragend', () => {
+button.classList.remove('dragging');
+draggedLibraryItemId = null;
+if (libraryMenuElem) {
+libraryMenuElem.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+}
+});
+button.addEventListener('dragover', e => {
+if (draggedLibraryItemId == null) return;
+e.stopPropagation();
+if (canDropLibraryItem(draggedLibraryItemId, meta)) {
+e.preventDefault();
+e.dataTransfer.dropEffect = 'move';
+button.classList.add('drag-over');
+} else {
+button.classList.remove('drag-over');
+}
+});
+button.addEventListener('dragleave', e => {
+if (!button.contains(e.relatedTarget)) {
+button.classList.remove('drag-over');
+}
+});
+button.addEventListener('drop', async e => {
+if (draggedLibraryItemId == null) return;
+e.preventDefault();
+e.stopPropagation();
+button.classList.remove('drag-over');
+const draggedId = draggedLibraryItemId;
+if (!canDropLibraryItem(draggedId, meta)) return;
+const newParentId = isFolder ? meta.id : (meta.parentId ?? null);
+try {
+await moveLibraryItem(draggedId, newParentId);
+if (newParentId != null) {
+libraryOpenFolders.add(newParentId);
+}
+draggedLibraryItemId = null;
+renderLibraryList();
+} catch (err) {
+console.error(err);
+}
+});
+
 button.onclick = async e => {
 if (e.button !== 0) return;
 if (isFolder) {
@@ -255,10 +390,11 @@ if (e.button === 1) {
 e.preventDefault();
 try {
 const deletedIds = await deleteLibraryItemCompletely(meta.id);
-if (deletedIds.some(id => String(id) === String(libraryCurrentFolder))) {
-libraryCurrentFolder = meta.parentId ?? null;
-}
 deletedIds.forEach(id => libraryOpenFolders.delete(id));
+if (libraryCurrentFolder != null && !getLibraryMeta(libraryCurrentFolder)) {
+libraryCurrentFolder = null;
+}
+removeCurrentProjectFilesByLibraryIds(deletedIds);
 renderLibraryList();
 } catch (err) {
 console.error(err);
