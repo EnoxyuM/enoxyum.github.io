@@ -13,6 +13,25 @@ return numB - numA;
 }
 return 0;
 }
+async function syncDirtyLinkedFilesBeforeSave() {
+if (!isPreviewMode && typeof editor !== 'undefined' && editor && activeFilePath && files[activeFilePath] && !files[activeFilePath].isBinary) {
+files[activeFilePath].code = editor.getValue();
+}
+for (const filepath in files) {
+const f = files[filepath];
+if (!f || f.libRef == null || f.isBinary) continue;
+if (typeof f.code !== 'string') continue;
+const original = f.libOriginalCode !== undefined ? f.libOriginalCode : f.code;
+if (f.code === original) continue;
+const ok = await updateLibraryTextContent(f.libRef, f.code);
+if (ok) {
+f.libOriginalCode = f.code;
+} else {
+delete f.libRef;
+delete f.libOriginalCode;
+}
+}
+}
 function collectProjectFilesForSave() {
 if (!isPreviewMode && typeof editor !== 'undefined' && editor && activeFilePath && files[activeFilePath] && !files[activeFilePath].isBinary) {
 files[activeFilePath].code = editor.getValue();
@@ -22,8 +41,6 @@ for (const filepath in files) {
 const f = files[filepath];
 if (!f) continue;
 if (f.libRef != null) {
-const unchanged = f.isBinary || (typeof f.code === 'string' && f.code === (f.libOriginalCode !== undefined ? f.libOriginalCode : f.code));
-if (unchanged) {
 const minimal = {
 libRef: f.libRef,
 isBinary: !!f.isBinary
@@ -31,7 +48,6 @@ isBinary: !!f.isBinary
 if (f.isBinary && f.mimeType) minimal.mimeType = f.mimeType;
 filesToSave[filepath] = minimal;
 continue;
-}
 }
 if (f.isBinary) {
 filesToSave[filepath] = {
@@ -60,6 +76,17 @@ isBinary: !!data.isBinary
 if (data.isBinary && data.mimeType) minimal.mimeType = data.mimeType;
 return minimal;
 }
+if (data.isBinary) {
+return {
+isBinary: true,
+content: data.content,
+mimeType: data.mimeType
+};
+}
+return {
+code: data.code !== undefined ? data.code : '',
+isBinary: false
+};
 }
 if (data.isBinary) {
 return {
@@ -237,7 +264,14 @@ ensurePath(item.path);
 let data = item.data || {};
 if (data.libRef != null && data.code === undefined && data.content === undefined) {
 const hydrated = await hydrateProjectLibRefs({ [item.path]: data });
-data = hydrated[item.path] || data;
+data = hydrated[item.path];
+if (!data) {
+basket.splice(index, 1);
+saveBasket();
+await renderBasketView();
+updateBasketButtonText();
+return;
+}
 }
 if (data.isBinary) {
 files[item.path] = { ...data };
@@ -254,9 +288,16 @@ if (existingFolder) {
 showNotification(`Cannot restore: Folder '${item.path}' or its contents already exist.`);
 return;
 }
-ensurePath(item.path + '/.p');
 let folderFiles = item.files || {};
 folderFiles = await hydrateProjectLibRefs(folderFiles);
+if (Object.keys(folderFiles).length === 0) {
+basket.splice(index, 1);
+saveBasket();
+await renderBasketView();
+updateBasketButtonText();
+return;
+}
+ensurePath(item.path + '/.p');
 for (const filePath in folderFiles) {
 const fileData = folderFiles[filePath];
 if (!fileData) continue;
@@ -286,6 +327,7 @@ console.error('Could not save active tab:', e);
 }
 }
 async function saveCurrentCode(overwrite = false) {
+await syncDirtyLinkedFilesBeforeSave();
 const filesToSave = collectProjectFilesForSave();
 const now = new Date();
 if (overwrite && currentProjectId !== null) {
@@ -337,6 +379,7 @@ if (currentProjectId === null) {
 showNotification("Cannot create a version for an unsaved project.");
 return;
 }
+await syncDirtyLinkedFilesBeforeSave();
 const filesToSave = collectProjectFilesForSave();
 const currentProject = await getProjectRecord(currentProjectId);
 if (!currentProject) {
