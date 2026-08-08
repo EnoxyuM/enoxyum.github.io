@@ -106,7 +106,6 @@ if (!selectedFiles || selectedFiles.length === 0) {
 return;
 }
 const newFileSet = {};
-const TEXT_EXTENSIONS = new Set(['txt', 'js', 'json', 'html', 'htm', 'css', 'xml', 'svg', 'md', 'csv', 'log', 'ini', 'yaml', 'yml', 'toml', 'sh', 'bash', 'py', 'rb', 'php', 'java', 'c', 'cpp', 'h', 'hpp', 'cs', 'go', 'rs', 'ts', 'tsx', 'jsx']);
 if (selectedFiles.length === 1 && selectedFiles[0].name.toLowerCase().endsWith('.zip')) {
 const file = selectedFiles[0];
 showNotification(`Importing from ${file.name}...`);
@@ -216,7 +215,6 @@ if (!selectedFiles || selectedFiles.length === 0) {
 return;
 }
 const newFileSet = {};
-const TEXT_EXTENSIONS = new Set(['txt', 'js', 'json', 'html', 'htm', 'css', 'xml', 'svg', 'md', 'csv', 'log', 'ini', 'yaml', 'yml', 'toml', 'sh', 'bash', 'py', 'rb', 'php', 'java', 'c', 'cpp', 'h', 'hpp', 'cs', 'go', 'rs', 'ts', 'tsx', 'jsx']);
 const rootFolderName = selectedFiles[0].webkitRelativePath.split('/')[0];
 showNotification(`Importing from folder ${rootFolderName}...`);
 const fileReadPromises = Array.from(selectedFiles).map(file => {
