@@ -23,12 +23,11 @@ if (!f || f.libRef == null || f.isBinary) continue;
 if (typeof f.code !== 'string') continue;
 const original = f.libOriginalCode !== undefined ? f.libOriginalCode : f.code;
 if (f.code === original) continue;
+if (typeof updateLibraryTextContent === 'function') {
 const ok = await updateLibraryTextContent(f.libRef, f.code);
 if (ok) {
 f.libOriginalCode = f.code;
-} else {
-delete f.libRef;
-delete f.libOriginalCode;
+}
 }
 }
 }
