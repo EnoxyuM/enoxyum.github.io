@@ -5,22 +5,28 @@ files = {};
 for (const filepath in fileSet) {
 const fileData = fileSet[filepath];
 if (!fileData) continue;
+if (typeof fileData === 'string') {
+files[filepath] = {
+code: fileData,
+doc: CodeMirror.Doc(fileData, getModeForFilename(filepath)),
+isBinary: false
+};
+continue;
+}
 if (fileData.isBinary) {
 files[filepath] = { ...fileData };
 } else {
-const code = typeof fileData === 'string' ? fileData : (fileData.code || '');
+const code = fileData.code || '';
 const mode = getModeForFilename(filepath);
 const entry = {
 code,
 doc: CodeMirror.Doc(code, mode),
 isBinary: false
 };
-if (typeof fileData === 'object' && fileData !== null) {
 if (fileData.libRef != null) entry.libRef = fileData.libRef;
 if (fileData.libOriginalCode !== undefined) entry.libOriginalCode = fileData.libOriginalCode;
 else if (fileData.libRef != null) entry.libOriginalCode = code;
 if (fileData.mimeType) entry.mimeType = fileData.mimeType;
-}
 files[filepath] = entry;
 }
 }
