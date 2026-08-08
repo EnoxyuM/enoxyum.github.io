@@ -1,7 +1,23 @@
 // js/database.js
+if (typeof LIB_STORE_NAME === 'undefined') {
+window.LIB_STORE_NAME = 'library';
+}
+if (typeof LIB_META_STORE_NAME === 'undefined') {
+window.LIB_META_STORE_NAME = 'libraryMeta';
+}
+if (typeof libraryMetaCache === 'undefined') {
+window.libraryMetaCache = new Map();
+}
+if (typeof libraryMetaLoaded === 'undefined') {
+window.libraryMetaLoaded = false;
+}
+if (typeof libraryMetaLoadPromise === 'undefined') {
+window.libraryMetaLoadPromise = null;
+}
+
 function openDB() {
 return new Promise((resolve, reject) => {
-const request = indexedDB.open(DB_NAME, DB_VERSION);
+const request = indexedDB.open(DB_NAME, 3);
 request.onupgradeneeded = e => {
 db = e.target.result;
 if (!db.objectStoreNames.contains(STORE_NAME)) {
@@ -402,6 +418,13 @@ request.onsuccess = e => resolve(e.target.result);
 request.onerror = () => reject('Error adding library record');
 });
 }
+function putLibraryRecord(record) {
+return new Promise((resolve, reject) => {
+const request = db.transaction([LIB_STORE_NAME], 'readwrite').objectStore(LIB_STORE_NAME).put(record);
+request.onsuccess = e => resolve(e.target.result);
+request.onerror = () => reject('Error putting library record');
+});
+}
 function getLibraryRecord(id) {
 return new Promise((resolve, reject) => {
 const request = db.transaction([LIB_STORE_NAME], 'readonly').objectStore(LIB_STORE_NAME).get(id);
@@ -458,7 +481,10 @@ async function addLibraryFileObject(file, parentId) {
 const safeParent = parentId ?? null;
 const finalName = getUniqueLibraryName(file.name, safeParent, 'file');
 const extension = finalName.split('.').pop().toLowerCase();
-const isText = TEXT_EXTENSIONS.has(extension) || (file.type && file.type.startsWith('text/'));
+const TEXT_EXTENSIONS_LOCAL = typeof TEXT_EXTENSIONS !== 'undefined'
+? TEXT_EXTENSIONS
+: new Set(['txt', 'js', 'json', 'html', 'htm', 'css', 'xml', 'svg', 'md', 'csv', 'log', 'ini', 'yaml', 'yml', 'toml', 'sh', 'bash', 'py', 'rb', 'php', 'java', 'c', 'cpp', 'h', 'hpp', 'cs', 'go', 'rs', 'ts', 'tsx', 'jsx']);
+const isText = TEXT_EXTENSIONS_LOCAL.has(extension) || (file.type && file.type.startsWith('text/'));
 const now = Date.now();
 if (isText) {
 const code = await new Promise((resolve, reject) => {
@@ -518,18 +544,25 @@ known: true
 });
 return id;
 }
-function detachLibraryReferencesInCurrentFiles(libraryIds) {
-if (!libraryIds || libraryIds.length === 0) return;
-const idSet = new Set(libraryIds.map(String));
-for (const path in files) {
-const fileData = files[path];
-if (fileData && fileData.libRef != null && idSet.has(String(fileData.libRef))) {
-delete fileData.libRef;
-delete fileData.libOriginalCode;
+async function updateLibraryTextContent(id, code) {
+try {
+const record = await getLibraryRecord(id);
+if (!record || record.type === 'folder' || record.isBinary) return false;
+record.code = code;
+record.size = code.length;
+record.date = Date.now();
+await putLibraryRecord(record);
+await updateLibraryMetaOnly(id, {
+date: record.date,
+size: record.size
+});
+return true;
+} catch (e) {
+console.error(e);
+return false;
 }
 }
-}
-async function deleteLibraryItemCompletely(id) {
+function collectLibraryDescendantIds(id) {
 const ids = [];
 const seen = new Set();
 const collect = itemId => {
@@ -540,16 +573,33 @@ ids.push(itemId);
 getLibraryChildren(itemId).forEach(child => collect(child.id));
 };
 collect(id);
-for (const itemId of ids) {
-try {
-await deleteLibraryRecord(itemId);
-} catch (e) {}
-try {
-await removeLibraryMeta(itemId);
-} catch (e) {}
-}
-detachLibraryReferencesInCurrentFiles(ids);
 return ids;
+}
+async function deleteLibraryItemCompletely(id) {
+const ids = collectLibraryDescendantIds(id);
+if (!ids.length) return [];
+await new Promise((resolve, reject) => {
+const tx = db.transaction([LIB_STORE_NAME, LIB_META_STORE_NAME], 'readwrite');
+const libStore = tx.objectStore(LIB_STORE_NAME);
+const metaStore = tx.objectStore(LIB_META_STORE_NAME);
+ids.forEach(itemId => {
+libStore.delete(itemId);
+metaStore.delete(itemId);
+});
+tx.oncomplete = () => resolve();
+tx.onerror = () => reject(tx.error || 'Error deleting library item');
+tx.onabort = () => reject(tx.error || 'Error deleting library item');
+});
+ids.forEach(itemId => removeLibraryMetaLocal(itemId));
+return ids;
+}
+async function moveLibraryItem(id, newParentId) {
+const safeParent = (newParentId === undefined || newParentId === null) ? null : newParentId;
+const meta = getLibraryMeta(id);
+if (!meta) return;
+const currentParent = (meta.parentId === undefined || meta.parentId === null) ? null : meta.parentId;
+if (String(currentParent ?? '') === String(safeParent ?? '')) return;
+await updateLibraryMetaOnly(id, { parentId: safeParent });
 }
 async function hydrateProjectLibRefs(fileSet) {
 const hydrated = {};
@@ -563,7 +613,7 @@ try {
 const record = await getLibraryRecord(fileData.libRef);
 if (record && record.type !== 'folder') {
 if (record.isBinary) {
-fileData = {
+hydrated[path] = {
 libRef: fileData.libRef,
 isBinary: true,
 mimeType: record.mimeType || fileData.mimeType || 'application/octet-stream',
@@ -571,41 +621,18 @@ content: record.content
 };
 } else {
 const code = record.code || '';
-fileData = {
+hydrated[path] = {
 libRef: fileData.libRef,
 isBinary: false,
 code,
 libOriginalCode: code
 };
 }
-} else {
-if (fileData.isBinary) {
-fileData = {
-isBinary: true,
-mimeType: fileData.mimeType || 'application/octet-stream',
-content: pako.gzip(new Uint8Array(0))
-};
-} else {
-fileData = {
-isBinary: false,
-code: ''
-};
-}
 }
 } catch (e) {
-if (fileData.isBinary) {
-fileData = {
-isBinary: true,
-mimeType: fileData.mimeType || 'application/octet-stream',
-content: pako.gzip(new Uint8Array(0))
-};
-} else {
-fileData = {
-isBinary: false,
-code: ''
-};
+console.error(e);
 }
-}
+continue;
 } else if (!fileData.isBinary && fileData.libOriginalCode === undefined && fileData.code !== undefined) {
 fileData = { ...fileData, libOriginalCode: fileData.code };
 }
@@ -637,19 +664,10 @@ isBinary: false,
 code: record.code || ''
 };
 }
-continue;
 }
-} catch (e) {}
-resolved[path] = fileData.isBinary
-? {
-isBinary: true,
-mimeType: fileData.mimeType || 'application/octet-stream',
-content: pako.gzip(new Uint8Array(0))
+} catch (e) {
+console.error(e);
 }
-: {
-isBinary: false,
-code: ''
-};
 continue;
 }
 }
