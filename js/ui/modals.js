@@ -574,6 +574,7 @@ container.innerHTML = `
 `;
 container.onclick = async () => {
 isLauncherMode = false;
+localStorage.setItem('codium_last_view', 'editor');
 launcherView.style.display = 'none';
 editorElement.style.display = 'block';
 document.getElementById('file-tabs').style.display = 'flex';
@@ -585,8 +586,14 @@ await ensureEditorProjectLoaded();
 } catch (e) {
 console.error('Could not load editor project:', e);
 }
-if (scene) scene.style.pointerEvents = 'none';
+if (scene) {
+scene.style.zIndex = '0';
+scene.style.pointerEvents = 'none';
+}
+editorElement.style.pointerEvents = 'auto';
+showingEditor = true;
 editor.refresh();
+editor.focus();
 if (liveUpdateToggle.checked) {
 updateScene();
 }
@@ -664,6 +671,7 @@ if (isLauncherMode) {
 launcherView.style.display = 'none';
 scene.focus();
 } else {
+localStorage.setItem('codium_last_view', 'editor');
 launcherView.style.display = 'none';
 editorElement.style.display = 'block';
 document.getElementById('file-tabs').style.display = 'flex';
@@ -679,6 +687,7 @@ editor.refresh();
 editor.focus();
 }
 } else {
+localStorage.setItem('codium_last_view', 'launcher');
 editorElement.style.display = 'none';
 document.getElementById('file-tabs').style.display = 'none';
 document.querySelector('.live-update-switch').style.display = 'none';

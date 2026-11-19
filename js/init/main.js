@@ -60,6 +60,7 @@ if (!isPreviewMode) {
         loadBasket();
 
         if (await loadFromUrlHash()) {
+            localStorage.setItem('codium_last_view', 'editor');
             loadColors();
 
             editorElement.style.display = 'block';
@@ -73,7 +74,28 @@ if (!isPreviewMode) {
         }
 
         loadColors();
-        toggleLauncher();
+
+        const lastView = localStorage.getItem('codium_last_view');
+        if (lastView === 'launcher') {
+            toggleLauncher();
+            return;
+        }
+
+        localStorage.setItem('codium_last_view', 'editor');
+        isLauncherMode = false;
+        launcherView.style.display = 'none';
+        editorElement.style.display = 'block';
+        document.getElementById('file-tabs').style.display = 'flex';
+        document.querySelector('.live-update-switch').style.display = 'block';
+
+        try {
+            await ensureEditorProjectLoaded();
+        } catch (e) {
+            console.error('Could not load initial project:', e);
+        }
+
+        editor.refresh();
+        editor.focus();
     });
 } else {
     setupPreviewMode();
