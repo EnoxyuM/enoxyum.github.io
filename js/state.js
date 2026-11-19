@@ -15,6 +15,7 @@ const liveUpdateToggle = document.getElementById('liveUpdateToggle');
 const contextMenu = document.getElementById('context-menu');
 const runBtn = document.getElementById('run-btn');
 const copyBtn = document.getElementById('copy-btn');
+const updateFilesBtn = document.getElementById('update-files-btn');
 const pasteProjectBtn = document.getElementById('paste-project-btn');
 const menuBtn = document.getElementById('menu-btn');
 const inlineInputContainer = document.getElementById('inline-input-container');

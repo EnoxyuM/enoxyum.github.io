@@ -71,6 +71,34 @@ white-space: nowrap;
 #importBtn, #exportBtn { display: inline-block; margin-top: 10px; padding: 5px 10px; background: #4CAF50; color: white; border: none; cursor: pointer; border-radius: 8px; }
 #importBtn:hover, #exportBtn:hover { background: #45a049; }
 #notification { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background-color: #4CAF50; color: white; padding: 15px; border-radius: 6px; z-index: 2000; opacity: 0; transition: opacity 0.5s ease-in-out; pointer-events: none; box-shadow: 0 3px 10px rgba(0,0,0,0.5); }
+#update-report {
+position: fixed;
+bottom: 20px;
+right: 20px;
+background: rgba(30, 30, 30, 0.95);
+border: 1px solid #444;
+color: #e0e0e0;
+padding: 12px 16px;
+border-radius: 8px;
+z-index: 2000;
+font-family: monospace;
+font-size: 13px;
+line-height: 1.45;
+white-space: pre-wrap;
+word-break: break-word;
+max-width: min(460px, calc(100vw - 40px));
+max-height: 45vh;
+overflow-y: auto;
+box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+opacity: 0;
+pointer-events: none;
+transition: opacity 0.35s ease;
+cursor: pointer;
+}
+#update-report.visible {
+opacity: 1;
+pointer-events: auto;
+}
 #inline-input-container {
 position: fixed;
 top: 45px;
