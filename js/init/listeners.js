@@ -1,4 +1,8 @@
+// js/init/listeners.js
 let updateReportTimer = null;
+
+const CLIPBOARD_HEADER_PREFIX_RE = /^(?:(?:[-*+]|\d+[.)])\s+)?(?:(?:file|файл)\s*\d*\s*(?::|\s)\s*)?/i;
+const CLIPBOARD_ANNOTATION_TAIL_RE = /^[\s:;,.\-–—|>→*()\[\]]/;
 
 function normalizeClipboardFilePath(raw) {
     let p = String(raw || '').trim();
@@ -12,32 +16,26 @@ function isValidClipboardFilePath(p) {
     if (!p || p.length > 260) return false;
     if (/[\r\n\0<>|"?*]/.test(p)) return false;
     if (/^[a-zA-Z]+:\/\//.test(p)) return false;
-
     const parts = p.split('/');
     if (parts.some(seg => !seg || seg === '.' || seg === '..')) return false;
-
     const filename = parts[parts.length - 1];
     if (filename === '.p') return false;
     if (/[,;!()[\]{}]/.test(filename)) return false;
-
     const hasExt = /^(?:\.?[^./]+(?:\.[^./]+)+|\.[a-zA-Z0-9_-]+)$/.test(filename);
     const isKnownSpecial = /^(?:Makefile|Dockerfile|README|LICENSE|CHANGELOG|Procfile)$/i.test(filename);
     if (!hasExt && !isKnownSpecial) return false;
-
     if (filename.includes('.') && !filename.startsWith('.')) {
         const ext = filename.split('.').pop();
         if (!/^[a-zA-Z][a-zA-Z0-9]{0,11}$/.test(ext) && !/^(?:7z|mp3|mp4|h264|woff2|ttf|otf|sqlite3|m4a|m4v)$/i.test(ext)) {
             return false;
         }
     }
-
     return true;
 }
 
 function extractCandidatePath(text, allowSpaces = false) {
     let s = String(text || '').trim();
     if (!s) return null;
-
     const unwrapBold = (str) => {
         let cur = str.trim();
         let changed = true;
@@ -53,73 +51,127 @@ function extractCandidatePath(text, allowSpaces = false) {
         }
         return cur;
     };
-
     s = unwrapBold(s);
     s = s.replace(/^(?:(?:file|файл)\s*\d*\s*[:.-]?\s*|\d+[.)]\s+)/i, '').trim();
     s = unwrapBold(s);
     s = s.replace(/\s*:\s*$/, '').trim();
-
     const btMatch = s.match(/^`([^`]+)`(?:\s*(?:[-–—:(].*)?)?$/);
     if (btMatch) {
         const cand = normalizeClipboardFilePath(btMatch[1]);
         return isValidClipboardFilePath(cand) ? cand : null;
     }
-
     const cand = normalizeClipboardFilePath(s);
     if (!isValidClipboardFilePath(cand)) return null;
     if (cand.includes(' ') && !allowSpaces && !files[cand]) return null;
     return cand;
 }
 
+function stripClipboardHeaderPrefix(text) {
+    return String(text || '').trim().replace(CLIPBOARD_HEADER_PREFIX_RE, '').trim();
+}
+
+function findBacktickedPathInText(text) {
+    const re = /`([^`\n]+)`/g;
+    const source = String(text || '');
+    let match;
+    while ((match = re.exec(source)) !== null) {
+        const cand = normalizeClipboardFilePath(match[1]);
+        if (isValidClipboardFilePath(cand)) return cand;
+    }
+    return null;
+}
+
+// **path** (комментарий) / **path** Новый файл / __path__ — описание / `path`: описание
+// hasAnnotation = true → такой заголовок принимается только если следом идёт код-блок
+function extractMarkupHeader(text) {
+    const s = stripClipboardHeaderPrefix(text);
+    if (!s) return null;
+    const patterns = [
+        /^\*\*([\s\S]+?)\*\*([\s\S]*)$/,
+        /^__([\s\S]+?)__([\s\S]*)$/,
+        /^`([^`]+)`([\s\S]*)$/
+    ];
+    for (const re of patterns) {
+        const match = s.match(re);
+        if (!match) continue;
+        const rawTail = match[2] || '';
+        if (rawTail && !CLIPBOARD_ANNOTATION_TAIL_RE.test(rawTail)) continue;
+        const path = extractCandidatePath(match[1], false) || findBacktickedPathInText(match[1]);
+        if (!path) continue;
+        const tail = rawTail.trim();
+        return { path, hasAnnotation: tail !== '' && tail !== ':' };
+    }
+    return null;
+}
+
+// js/a.js — новый файл / js/a.js (комментарий)
+function extractLeadingPathToken(text) {
+    const s = stripClipboardHeaderPrefix(text);
+    if (!s) return null;
+    const match = s.match(/^(\S+)(?:\s+[\s\S]*)?$/);
+    if (!match) return null;
+    const token = match[1]
+        .replace(/^["'«]+/, '')
+        .replace(/["'»]+$/, '')
+        .replace(/[)\],;:.]+$/, '');
+    const cand = normalizeClipboardFilePath(token);
+    return isValidClipboardFilePath(cand) ? cand : null;
+}
+
 function parseFileHeaderLine(rawLine, nextNonEmptyLineIsFence) {
     const line = rawLine.trim();
     if (!line) return { type: 'empty' };
-
     if (/^([-*_])\s*(\1\s*){2,}$/.test(line)) {
         return { type: 'hr' };
     }
-
     const headingMatch = line.match(/^#{1,6}\s+(.+)$/);
     if (headingMatch) {
         const headingBody = headingMatch[1].replace(/\s+#+\s*$/, '').trim();
-        const cand = extractCandidatePath(headingBody, false);
+        let cand = extractCandidatePath(headingBody, false);
+        if (!cand) {
+            const markup = extractMarkupHeader(headingBody);
+            if (markup && (!markup.hasAnnotation || nextNonEmptyLineIsFence)) {
+                cand = markup.path;
+            }
+        }
+        if (!cand && nextNonEmptyLineIsFence) {
+            cand = extractLeadingPathToken(headingBody);
+        }
         if (cand) return { type: 'file', path: cand };
         return { type: 'heading' };
     }
-
+    const markupHeader = extractMarkupHeader(line);
+    if (markupHeader && (!markupHeader.hasAnnotation || nextNonEmptyLineIsFence)) {
+        return { type: 'file', path: markupHeader.path };
+    }
     const boldMatch = line.match(/^\*\*(.+?)\*\*\s*:?\s*$/);
     if (boldMatch) {
         const cand = extractCandidatePath(boldMatch[1], false);
         if (cand) return { type: 'file', path: cand };
     }
-
     const backtickOnlyMatch = line.match(/^`([^`]+)`\s*:?\s*$/);
     if (backtickOnlyMatch) {
         const cand = normalizeClipboardFilePath(backtickOnlyMatch[1]);
         if (isValidClipboardFilePath(cand)) return { type: 'file', path: cand };
     }
-
     const labeledMatch = line.match(/^(?:[-*+]|\d+[.)])?\s*(?:file|файл)\s*(?::|\s)\s*(.+)$/i);
     if (labeledMatch) {
         const cand = extractCandidatePath(labeledMatch[1], false);
         if (cand) return { type: 'file', path: cand };
     }
-
     const listMatch = line.match(/^(?:[-*+]|\d+[.)])\s+(.+)$/);
     if (listMatch) {
         const itemText = listMatch[1].trim();
-        const hasExplicitMarkup = /^(`[^`]+`|\*\*.*\*\*)/.test(itemText);
+        const hasExplicitMarkup = /^(`[^`]+`|\*\*.*\*\*|__.*__)/.test(itemText);
         const cand = extractCandidatePath(itemText, false);
         if (cand && (hasExplicitMarkup || nextNonEmptyLineIsFence)) {
             return { type: 'file', path: cand };
         }
     }
-
     if (nextNonEmptyLineIsFence) {
-        const cand = extractCandidatePath(line, false);
+        const cand = extractCandidatePath(line, false) || extractLeadingPathToken(line);
         if (cand) return { type: 'file', path: cand };
     }
-
     return { type: 'text' };
 }
 
@@ -161,7 +213,6 @@ function parseFilesFromClipboardText(rawText) {
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
-
         if (inFence) {
             if (isFenceClosingLine(line, fenceChar, fenceLen)) {
                 if (activeBlockFile) {
@@ -186,7 +237,6 @@ function parseFilesFromClipboardText(rawText) {
             }
             continue;
         }
-
         const opening = isFenceOpeningLine(line);
         if (opening) {
             inFence = true;
@@ -196,11 +246,9 @@ function parseFilesFromClipboardText(rawText) {
             activeBlockFile = currentSectionFile;
             continue;
         }
-
         const nextNonEmpty = getNextNonEmptyLine(i + 1);
         const nextIsFence = Boolean(nextNonEmpty && isFenceOpeningLine(nextNonEmpty));
         const parsedLine = parseFileHeaderLine(line, nextIsFence);
-
         if (parsedLine.type === 'file') {
             currentSectionFile = parsedLine.path;
             currentSectionBlockCount = 0;
@@ -216,7 +264,6 @@ function parseFilesFromClipboardText(rawText) {
 function showUpdateReport(updatedFiles, createdFiles) {
     const reportEl = document.getElementById('update-report');
     if (!reportEl) return;
-
     if (!reportEl.dataset.listenersAttached) {
         reportEl.dataset.listenersAttached = 'true';
         reportEl.addEventListener('click', () => {
@@ -241,7 +288,6 @@ function showUpdateReport(updatedFiles, createdFiles) {
             }, 6000);
         });
     }
-
     const reportLines = [];
     reportLines.push(`updated ${updatedFiles.length} files:`);
     for (const filePath of updatedFiles) {
@@ -251,11 +297,9 @@ function showUpdateReport(updatedFiles, createdFiles) {
     for (const filePath of createdFiles) {
         reportLines.push(filePath);
     }
-
     reportEl.textContent = reportLines.join('\n');
     reportEl.scrollTop = 0;
     reportEl.classList.add('visible');
-
     if (updateReportTimer) clearTimeout(updateReportTimer);
     updateReportTimer = setTimeout(() => {
         reportEl.classList.remove('visible');
@@ -264,25 +308,20 @@ function showUpdateReport(updatedFiles, createdFiles) {
 
 function setupEventListeners() {
     window.addEventListener('resize', checkOverflow);
-
-    window.addEventListener('message', e => { 
-        if (e.source === scene.contentWindow) { 
-            logToConsole(e.data.type, e.data.content); 
-        } 
+    window.addEventListener('message', e => {
+        if (e.source === scene.contentWindow) {
+            logToConsole(e.data.type, e.data.content);
+        }
     });
-    
     window.addEventListener('paste', e => {
         if (e.clipboardData && e.clipboardData.files.length > 0) {
             e.preventDefault();
             uploadFiles(e.clipboardData.files, '');
         }
     });
-
     window.addEventListener('beforeunload', e => e.stopImmediatePropagation());
-
     projectTitle.addEventListener('click', toggleFilePanel);
     menuBtn.addEventListener('click', toggleMenu);
-    
     const addFileBtn = document.getElementById('add-file-btn');
     addFileBtn.onclick = () => createNewItem(false, '');
     addFileBtn.addEventListener('contextmenu', e => {
@@ -295,7 +334,6 @@ function setupEventListeners() {
         };
         input.click();
     });
-
     filePanel.addEventListener('mousedown', e => {
         if (e.button !== 1) return;
         const target = e.target.closest('.file-entry');
@@ -307,7 +345,6 @@ function setupEventListeners() {
             showNotification("Cannot delete index.html");
             return;
         }
-
         if (isFolder) {
             const folderContents = {};
             const keysToDelete = Object.keys(files).filter(path => path.startsWith(pathToDelete + '/'));
@@ -316,7 +353,6 @@ function setupEventListeners() {
                 folderContents[path] = rest;
             });
             basket.push({ type: 'folder', path: pathToDelete, files: folderContents });
-
             keysToDelete.forEach(path => {
                 closeTab(path);
                 delete files[path];
@@ -330,7 +366,6 @@ function setupEventListeners() {
         saveBasket();
         renderAll();
     });
-
     filePanel.addEventListener('contextmenu', e => {
         e.preventDefault();
         const target = e.target.closest('.file-entry');
@@ -338,15 +373,12 @@ function setupEventListeners() {
         const isFolder = target ? target.classList.contains('folder') : true;
         showContextMenu(e.clientX, e.clientY, path, isFolder);
     });
-
     document.addEventListener('click', () => contextMenu.style.display = 'none');
-    
     for (const type in colorTypes) {
         document.getElementById(type).addEventListener('change', () => changeColor(type));
     }
     exportBtn.addEventListener('click', exportSettings);
     importBtn.addEventListener('click', importSettings);
-
     copyBtn.addEventListener('click', () => {
         if (activeFilePath && files[activeFilePath] && !files[activeFilePath].isBinary) {
             files[activeFilePath].code = editor.getValue();
@@ -367,7 +399,7 @@ function setupEventListeners() {
                 output.push(`${path}\n\`\`\`\n${files[path].code}\n\`\`\``);
             }
         }
-        const textToCopy = output.join('\n\n');
+        const textToCopy = output.join('\n');
         navigator.clipboard.writeText(textToCopy).then(() => {
             showNotification('Code for all files copied');
         }).catch(err => {
@@ -375,7 +407,6 @@ function setupEventListeners() {
             showNotification('Error: Could not copy code');
         });
     });
-
     if (updateFilesBtn) {
         updateFilesBtn.addEventListener('click', async () => {
             try {
@@ -384,29 +415,23 @@ function setupEventListeners() {
                     showNotification('Clipboard is empty');
                     return;
                 }
-
                 const parsedFiles = parseFilesFromClipboardText(text);
                 if (parsedFiles.size === 0) {
                     showNotification('Could not parse any files from clipboard');
                     return;
                 }
-
                 const updatedFiles = [];
                 const createdFiles = [];
                 let activeViewNeedsRefresh = false;
-
                 editor.off("change", updateScene);
-
                 try {
                     const existingKeys = Object.keys(files);
                     const existingIndexHtml = existingKeys.find(key => key.toLowerCase() === 'index.html');
-
                     for (const [rawPath, code] of parsedFiles.entries()) {
                         let targetPath = rawPath;
                         if (!files[targetPath] && rawPath.toLowerCase() === 'index.html' && existingIndexHtml) {
                             targetPath = existingIndexHtml;
                         }
-
                         if (files[targetPath]) {
                             updatedFiles.push(targetPath);
                             if (files[targetPath].isBinary || !files[targetPath].doc) {
@@ -432,7 +457,6 @@ function setupEventListeners() {
                             };
                         }
                     }
-
                     if (activeViewNeedsRefresh && activeFilePath && files[activeFilePath]) {
                         updateEditorView(activeFilePath);
                     }
@@ -441,12 +465,10 @@ function setupEventListeners() {
                         editor.on("change", updateScene);
                     }
                 }
-
                 renderAll();
                 if (liveUpdateToggle.checked) {
                     updateScene();
                 }
-
                 showUpdateReport(updatedFiles, createdFiles);
             } catch (err) {
                 console.error('Failed to read clipboard or update files:', err);
@@ -458,7 +480,6 @@ function setupEventListeners() {
             }
         });
     }
-
     if (pasteProjectBtn) {
         pasteProjectBtn.addEventListener('click', async () => {
             try {
@@ -468,15 +489,25 @@ function setupEventListeners() {
                     return;
                 }
                 const newFileSet = {};
-                const regex = /^(.+?)\s*\r?\n\`\`\`(?:.*)\r?\n([\s\S]+?)\r?\n\`\`\`/gm;
-                let match;
                 let foundFiles = false;
-                while ((match = regex.exec(text)) !== null) {
+                const parsedFiles = parseFilesFromClipboardText(text);
+                if (parsedFiles.size > 0) {
                     foundFiles = true;
-                    const filename = match[1].trim();
-                    const code = match[2];
-                    if (filename) {
-                        newFileSet[filename] = { code: code, isBinary: false };
+                    for (const [path, code] of parsedFiles.entries()) {
+                        newFileSet[path] = { code: code, isBinary: false };
+                    }
+                } else {
+                    const regex = /^(.+?)\s*\r?\n\`\`\`(?:.*)\r?\n([\s\S]+?)\r?\n\`\`\`/gm;
+                    let match;
+                    while ((match = regex.exec(text)) !== null) {
+                        foundFiles = true;
+                        const rawName = match[1].trim();
+                        const markup = extractMarkupHeader(rawName);
+                        const filename = (markup && markup.path) || rawName;
+                        const code = match[2];
+                        if (filename) {
+                            newFileSet[filename] = { code: code, isBinary: false };
+                        }
                     }
                 }
                 if (!foundFiles) {
@@ -499,19 +530,17 @@ function setupEventListeners() {
             } catch (err) {
                 console.error('Failed to read clipboard or parse project:', err);
                 if (err.name === 'NotAllowedError') {
-                   showNotification('Clipboard access denied by browser');
+                    showNotification('Clipboard access denied by browser');
                 } else {
-                   showNotification('Error: Could not load from clipboard');
+                    showNotification('Error: Could not load from clipboard');
                 }
             }
         });
     }
-    
     runBtn.addEventListener('click', async () => {
         await saveCurrentCode(true);
         window.open(`${location.origin}${location.pathname}#t`, '_blank');
     });
-
     if (launcherBtn) {
         launcherBtn.addEventListener('click', () => {
             toggleLauncher();
